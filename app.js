@@ -68,7 +68,7 @@ async function buildScene() {
   scene?.dispose();
   scene = undefined;
   try {
-    factory ||= (await import('./scene.js')).createArchipelago;
+    factory ||= (await import('./scene.js?v=natural2')).createArchipelago;
     if (version !== rebuilding) return;
     scene = factory({container: $('scene'), reducedMotion, onSelect: id => selectGroup(id,true), onError: showFallback});
     $('tour').disabled = false;
@@ -99,7 +99,7 @@ $('needs').innerHTML = [{id:'all',label:'全部航線'},...needs].map(need=>`<bu
 $('map-needs').innerHTML = $('needs').innerHTML;
 $('map-needs').addEventListener('click',event=>{const button=event.target.closest('[data-need]');if(button)setNeed(button.dataset.need);});
 $('needs').addEventListener('click',event=>{const button=event.target.closest('[data-need]');if(button)setNeed(button.dataset.need);});
-$('group-tabs').innerHTML = groups.map(group=>`<button type="button" data-group="${group.id}" aria-pressed="false"><span>${group.id.toUpperCase()}</span><strong>${escapeHTML(group.shortName)}</strong></button>`).join('');
+$('group-tabs').innerHTML = groups.map(group=>`<button type="button" data-group="${group.id}" aria-pressed="false"><span>${group.id.toUpperCase()}</span><strong>${escapeHTML(group.shortName).replace(/^(.{2})(.+)$/,"$1<wbr>$2")}</strong></button>`).join('');
 $('group-tabs').addEventListener('click',event=>{const button=event.target.closest('[data-group]');if(button)selectGroup(button.dataset.group);});
 $('more-routes').addEventListener('click',()=>{expanded=!expanded;renderRoutes();});
 $('tour').addEventListener('click',()=>{tour=!tour;if(tour && reducedMotion){reducedMotion=false;buildScene();}else scene?.setTour(tour);updateMotionControls();});

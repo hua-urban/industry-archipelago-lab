@@ -8,3 +8,10 @@
 .island-marker-letter{font-size:11px;display:inline-grid;place-items:center;width:21px;height:21px;background:#e5ece1;border-radius:50%}.map-needs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;background:#d6e7df;padding:10px 14px;border-top:1px solid #b7d4c8}.map-needs button{min-height:36px;border:1px solid #b2c9bb;border-radius:24px;background:#fff9;padding:5px 14px;font-size:11px}.map-needs button[aria-pressed=true]{background:var(--green);color:#fff;border-color:var(--green)}@media(max-width:480px){.map-needs{gap:5px;padding:9px 10px}.map-needs button{padding:5px 11px;font-size:10px;min-height:38px}.map-tools{border-top:0}}
 
 [hidden]{display:none!important}@media(max-width:480px){.scene{height:525px}}
+
+/* Stable, readable labels for the richer terrain. */
+.island-marker{border-color:#ffffffd9;box-shadow:0 3px 12px #173f3730;font-weight:700;background:#fffffff5;letter-spacing:.01em}.island-marker-letter{color:#fff;background:#6b8666}.island-marker[data-island=a] .island-marker-letter{background:#9b7851}.island-marker[data-island=b] .island-marker-letter{background:#a55e44}.island-marker[data-island=c] .island-marker-letter{background:#69856a}.island-marker[data-island=d] .island-marker-letter{background:#347e81}.island-marker[data-island=e] .island-marker-letter{background:#547f45}.island-marker.is-active{border-color:#fefefee6}.map-needs button{min-height:40px}@media(max-width:480px){.island-marker{font-size:11px;min-height:40px;padding:5px 9px;gap:5px}.island-marker-letter{width:19px;height:19px;font-size:10px}.map-needs button{min-height:42px}}
+
+.map-heading>div{background:#f8faf0ed;border:1px solid #ffffffb5;border-radius:13px;padding:10px 15px;box-shadow:0 2px 12px #20594a12;backdrop-filter:blur(6px)}.map-heading .eyebrow{color:#47665a}.map-count{background:#f8faf0e8;border:1px solid #ffffffa8;border-radius:30px;padding:7px 15px;color:#365e52}@media(max-width:480px){.map-heading>div{padding:9px 12px}.map-heading{top:15px;left:15px;right:15px}.map-heading h2{margin-top:3px}}
+
+.group-tabs{grid-template-columns:repeat(5,minmax(0,1fr))}.group-tabs button{min-width:0}

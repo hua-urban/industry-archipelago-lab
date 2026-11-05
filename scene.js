@@ -21,7 +21,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure=1.18;
+  renderer.toneMappingExposure=1.03;
   renderer.shadowMap.enabled=true;
   renderer.shadowMap.type=THREE.PCFShadowMap;
   renderer.domElement.className='scene-canvas';
@@ -33,8 +33,8 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   controls.autoRotate=tour;controls.autoRotateSpeed=.21;
   controls.enablePan=true;controls.screenSpacePanning=false;controls.maxTargetRadius=15;
   controls.touches.ONE=THREE.TOUCH.ROTATE;controls.touches.TWO=THREE.TOUCH.DOLLY_PAN;
-  scene.add(new THREE.HemisphereLight(0xedf8ed,0x6b8581,2.6));
-  const sun=new THREE.DirectionalLight(0xffefcf,3.3);sun.position.set(-28,65,25);scene.add(sun);
+  scene.add(new THREE.HemisphereLight(0xe9f2df,0x526e69,1.8));
+  const sun=new THREE.DirectionalLight(0xffedcf,2.8);sun.position.set(-28,65,25);scene.add(sun);
   sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-48;sun.shadow.camera.right=48;
   sun.shadow.camera.top=42;sun.shadow.camera.bottom=-42;sun.shadow.normalBias=.08;
   const geos=new Set(), mats=new Set();
@@ -43,7 +43,8 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   const box=geo(new THREE.BoxGeometry(1,1,1)), cylinder=geo(new THREE.CylinderGeometry(1,1,1,12));
   const cone=geo(new THREE.ConeGeometry(1,1,6)), sphere=geo(new THREE.IcosahedronGeometry(1,1));
   const mesh=(g,m,parent,pos=[0,0,0],scale=[1,1,1])=>{const o=new THREE.Mesh(g,m);o.position.set(...pos);o.scale.set(...scale);o.castShadow=true;o.receiveShadow=true;parent.add(o);return o;};
-  const seaMat=material(0x6caaa9,{roughness:.37,metalness:.18});
+  const seaMat=material(0x388f99,{roughness:.42,metalness:.12});
+  seaMat.onBeforeCompile=shader=>{shader.uniforms.coastTime={value:0};seaMat.userData.shader=shader;shader.vertexShader=shader.vertexShader.replace('#include <common>','#include <common>\nvarying vec3 waterPosition;').replace('#include <begin_vertex>','#include <begin_vertex>\nwaterPosition=position;');shader.fragmentShader=shader.fragmentShader.replace('#include <common>','#include <common>\nvarying vec3 waterPosition; uniform float coastTime;').replace('#include <color_fragment>','#include <color_fragment>\nfloat wave=sin(waterPosition.x*.29+sin(waterPosition.y*.21)+coastTime)*sin(waterPosition.y*.33-coastTime*.6); diffuseColor.rgb *= .94 + wave*.075;');};
   const sea=mesh(geo(new THREE.PlaneGeometry(1200,1200)),seaMat,scene);sea.rotation.x=-Math.PI/2;sea.position.y=-.42;sea.castShadow=false;
   // Fine, static water contours keep the sea legible without a costly shader.
   const waterLines=new THREE.Group();scene.add(waterLines);
@@ -54,9 +55,10 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     for(let j=1;j<pts.length;j++)waterSegments.push(pts[j-1],pts[j]);
   }
   waterLines.add(new THREE.LineSegments(geo(new THREE.BufferGeometry().setFromPoints(waterSegments)),lineMat));
-  const islandData=new Map(), pickables=[], labels=[], ripples=[];
+  const islandData=new Map(), pickables=[], labels=[], ripples=[], fans=[];
+  const isMobile=container.clientWidth<600;
   const m4=new THREE.Matrix4(), quat=new THREE.Quaternion(), p=new THREE.Vector3(), s=new THREE.Vector3();
-  function instances(g,m,transforms,parent){if(!transforms.length)return;const inst=new THREE.InstancedMesh(g,m,transforms.length);transforms.forEach((t,i)=>{p.set(...t.p);s.set(...t.s);quat.setFromAxisAngle(THREE.Object3D.DEFAULT_UP,t.rot||0);m4.compose(p,quat,s);inst.setMatrixAt(i,m4);});inst.castShadow=true;inst.receiveShadow=true;parent.add(inst);return inst;}
+  function instances(g,m,transforms,parent,castShadow=true){if(!transforms.length)return;const inst=new THREE.InstancedMesh(g,m,transforms.length);transforms.forEach((t,i)=>{p.set(...t.p);s.set(...t.s);quat.setFromAxisAngle(THREE.Object3D.DEFAULT_UP,t.rot||0);m4.compose(p,quat,s);inst.setMatrixAt(i,m4);});inst.castShadow=castShadow;inst.receiveShadow=true;parent.add(inst);return inst;}
   function outline(cfg){
     const profiles={
       a:[[-11,-2],[-9,2],[-5,4],[1,5],[7,3],[11,0],[8,-3],[3,-4],[-3,-4]],
@@ -66,7 +68,6 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
       e:[[-9,-1],[-7,4],[-3,6],[1,5],[5,6],[8,3],[9,-1],[6,-4],[2,-5],[-1,-4],[-5,-5],[-8,-3]]
     };
     const pts=profiles[cfg.id].map(([x,y])=>new THREE.Vector3(x,y,0));
-    if(cfg.id==='d')return new THREE.Shape(pts.map(v=>new THREE.Vector2(v.x,v.y)));
     const curve=new THREE.CatmullRomCurve3(pts,true,'centripetal');
     return new THREE.Shape(curve.getPoints(128).map(v=>new THREE.Vector2(v.x,v.y)));
   }
@@ -75,20 +76,42 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     const own=[];const mat=(color,opts)=>{const m=material(color,opts);own.push({m,color:m.color.clone()});return m;};
     const sand=mat(0xe3d4ac),rock=mat(0x879a83),land=mat(cfg.color),road=mat(0xe5ddc5),walls=mat(0xece7d2),roof=mat(cfg.roof),glass=mat(0x8fb5b1,{roughness:.28,metalness:.1}),wood=mat(0x967b58),leaf=mat(cfg.id==='c'?0x718c6a:0x547955),leafLight=mat(0x88a16b);
     const shape=outline(cfg);
-    const terrainGeo=geo(new THREE.ExtrudeGeometry(shape,{depth:1,bevelEnabled:true,bevelSize:.5,bevelThickness:.3,bevelSegments:2,steps:1,curveSegments:16}));
-    function terrain(m,y,xz,h){const o=mesh(terrainGeo,m,root,[0,y,0],[xz,xz,h]);o.rotation.x=-Math.PI/2;o.userData.islandId=cfg.id;pickables.push(o);return o;}
-    terrain(rock,-.12,1.035,.8);terrain(sand,.37,1.015,.2);terrain(land,.62,.92,.21);
-    const coastPts=shape.getPoints(96).map(v=>new THREE.Vector3(v.x*1.08,-.29,-v.y*1.08));
-    const foamMat=new THREE.LineBasicMaterial({color:0xe8f0d6,transparent:true,opacity:.53});mats.add(foamMat);own.push({m:foamMat,color:foamMat.color.clone()});
-    const foam=new THREE.LineLoop(geo(new THREE.BufferGeometry().setFromPoints(coastPts)),foamMat);root.add(foam);ripples.push(foam);
-    const buildings=[],roofs=[],windows=[],trunks=[],crowns=[],crowns2=[];
+    // One continuous terrain skin: flat settlement, grassy shoulder, tapered beach, submerged rock.
+    const contour=shape.getPoints(112);if(contour[0].distanceTo(contour.at(-1))<.001)contour.pop();
+    const n=contour.length, terrainPositions=[],terrainColors=[],terrainIndices=[];
+    const shoreRandom=rng(cfg.seed), shoreNoise=contour.map((v,i)=>Math.sin(i*.63+cfg.seed)*.018+Math.sin(i*.19)*.022);
+    const groundColors=[new THREE.Color(cfg.id==='a'?0xa6ac72:cfg.id==='b'?0x8f9c62:0x66905b),new THREE.Color(0x82a366),new THREE.Color(0xd6c28e),new THREE.Color(0xa59d7d),new THREE.Color(0x657e73)];
+    const ringScales=[.82,.94,1.015,1.055,1.08], ringHeights=[.99,.87,.17,-.12,-.48];
+    for(let ring=0;ring<5;ring++)for(let i=0;i<n;i++){
+      const v=contour[i], noise=shoreNoise[i], scale=ringScales[ring]+(ring?noise:0);
+      terrainPositions.push(v.x*scale,ringHeights[ring]+(ring===1?Math.sin(i*.35+cfg.seed)*.10:0),-v.y*scale);
+      const c=groundColors[ring].clone().multiplyScalar(.94+Math.sin(i*.47+cfg.seed)*.06);terrainColors.push(c.r,c.g,c.b);
+    }
+    for(let ring=0;ring<4;ring++)for(let i=0;i<n;i++){const j=(i+1)%n,a=ring*n+i,b=ring*n+j,c=(ring+1)*n+i,d=(ring+1)*n+j;terrainIndices.push(a,c,b,b,c,d);}
+    for(const tri of THREE.ShapeUtils.triangulateShape(contour,[]))terrainIndices.push(tri[2],tri[1],tri[0]);
+    const terrainGeo=geo(new THREE.BufferGeometry());terrainGeo.setAttribute('position',new THREE.Float32BufferAttribute(terrainPositions,3));terrainGeo.setAttribute('color',new THREE.Float32BufferAttribute(terrainColors,3));terrainGeo.setIndex(terrainIndices);terrainGeo.computeVertexNormals();
+    const ground=mesh(terrainGeo,mat(0xffffff,{vertexColors:true,side:THREE.DoubleSide}),root);ground.userData.islandId=cfg.id;pickables.push(ground);
+    const shoalPositions=[],shoalIndices=[];
+    for(const scale of [1.045,1.17,1.31])for(let i=0;i<n;i++){const v=contour[i];shoalPositions.push(v.x*(scale+shoreNoise[i]),-.365,-v.y*(scale+shoreNoise[i]));}
+    for(let ring=0;ring<2;ring++)for(let i=0;i<n;i++){const j=(i+1)%n,a=ring*n+i,b=ring*n+j,c=(ring+1)*n+i,d=(ring+1)*n+j;shoalIndices.push(a,b,c,b,d,c);}
+    const shoalGeo=geo(new THREE.BufferGeometry());shoalGeo.setAttribute('position',new THREE.Float32BufferAttribute(shoalPositions,3));shoalGeo.setIndex(shoalIndices);shoalGeo.computeVertexNormals();
+    const shoal=mesh(shoalGeo,mat(0x75c4b4,{transparent:true,opacity:.46,depthWrite:false,side:THREE.DoubleSide}),root);shoal.castShadow=false;
+    const foamPoints=[];for(let i=0;i<n;i++){if(i%9>5)continue;for(const k of [i,(i+1)%n]){const v=contour[k],scale=1.09+shoreNoise[k];foamPoints.push(new THREE.Vector3(v.x*scale,-.30,-v.y*scale));}}
+    const foamMat=new THREE.LineBasicMaterial({color:0xe7efd3,transparent:true,opacity:.48});mats.add(foamMat);own.push({m:foamMat,color:foamMat.color.clone()});
+    const foam=new THREE.LineSegments(geo(new THREE.BufferGeometry().setFromPoints(foamPoints)),foamMat);root.add(foam);ripples.push(foam);
+    const buildings=[],roofs=[],windows=[],trunks=[],crowns=[],crowns2=[],pines=[],stones=[],shrubs=[],flowers=[], hillocks=[], details=[], panels=[];
+    const dark=mat(0x344f56), flowerMat=mat(cfg.id==='b'?0xe9aa81:0xe9cf77), stoneMat=mat(0x778377);
     const random=rng(cfg.seed+100);
     const makeBuilding=(x,z,w,d,h,rotation=0)=>{
       buildings.push({p:[x,1+h/2,z],s:[w,h,d],rot:rotation});
       roofs.push({p:[x,1+h+.16,z],s:[w+.16,.28,d+.16],rot:rotation});
       for(let yy=1.5;yy<h+.8;yy+=.85) windows.push({p:[x,yy,z+d/2+.016],s:[w*.67,.29,.025],rot:rotation});
     };
-    function tree(x,z,t=1){trunks.push({p:[x,1.6,z],s:[.13,1.4,.13]});crowns.push({p:[x,2.45*t,z],s:[.75*t,1.05*t,.75*t]});crowns2.push({p:[x+.25,2.2*t,z-.18],s:[.6*t,.7*t,.6*t]});}
+    function tree(x,z,t=1){trunks.push({p:[x,.99+.65*t,z],s:[.12*t,1.3*t,.12*t]});if(random()<.27){pines.push({p:[x,.99+1.55*t,z],s:[.68*t,2.1*t,.68*t]});}else{crowns.push({p:[x,.99+1.5*t,z],s:[.76*t,1.04*t,.68*t],rot:random()*6});crowns2.push({p:[x+.25*t,.99+1.3*t,z-.18*t],s:[.6*t,.74*t,.6*t]});}}
+    function path(points,w=.35,m=road,y=1.025){for(let i=1;i<points.length;i++){const a=points[i-1],b=points[i],dx=b[0]-a[0],dz=b[1]-a[1],o=mesh(box,m,root,[(a[0]+b[0])/2,y,(a[1]+b[1])/2],[w,.045,Math.hypot(dx,dz)+w]);o.rotation.y=Math.atan2(dx,dz);}}
+    function bench(x,z,r=0){details.push({p:[x,1.3,z],s:[.95,.16,.38],rot:r});for(const dx of [-.32,.32])details.push({p:[x+dx,1.12,z],s:[.1,.26,.3],rot:r});}
+    function pergola(x,z){for(const dx of [-.85,.85])for(const dz of [-.6,.6])details.push({p:[x+dx,1.75,z+dz],s:[.1,1.5,.1]});for(let i=0;i<6;i++)details.push({p:[x-.95+i*.38,2.54,z],s:[.12,.12,1.65]});}
+
     // A compact civic grid, with a sculpted skyline and a central promenade.
     if(cfg.id==='a'){
       mesh(box,road,root,[0,1.02,0],[12,.08,1.1]);mesh(box,road,root,[0,1.03,0],[1.05,.08,9.5]);
@@ -130,8 +153,59 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
       for(const t of [[-5,-2],[-4,3],[-2,4],[4,2],[4,-4],[0,-4]])tree(...t,.8+random()*.3);
       mesh(box,road,root,[0,1.04,0],[.8,.08,10]);
     }
+    // Peripheral planted shoulders follow each coastline, away from the settlement core.
+    for(let i=0;i<n;i+=isMobile?9:6){
+      const v=contour[i],x=v.x*.88,z=-v.y*.88;
+      if(cfg.id==='c'&&z>0&&Math.abs(x)<4.5)continue;
+      if(cfg.id==='d'&&z>1.8&&Math.abs(x)<4.2)continue;
+      if(buildings.some(b=>Math.abs(b.p[0]-x)<b.s[0]/2+.8&&Math.abs(b.p[2]-z)<b.s[2]/2+.8))continue;
+      if(Math.abs(x)<.7||Math.abs(z)<.65)continue;
+      tree(x,z,.65+random()*.42);
+      for(let j=0;j<3;j++)shrubs.push({p:[x+(random()-.5)*1.2,1.02,z+(random()-.5)*.9],s:[.35+random()*.3,.24+random()*.25,.4]});
+      hillocks.push({p:[x*.96,.80,z*.96],s:[1.1,.42,.8]});
+    }
+    for(let i=0;i<n;i+=isMobile?7:4){if(i%13<4)continue;const v=contour[i],sc=1.04+shoreNoise[i];stones.push({p:[v.x*sc,-.02+random()*.17,-v.y*sc],s:[.26+random()*.5,.22+random()*.42,.28+random()*.4],rot:random()*6});}
+    if(cfg.id==='a'){
+      path([[-8,-.4],[-7,-1.7],[-6.4,-2.4]],.42);pergola(-7,-.8);bench(-7,1.7);
+      const crane=mat(0xd6a34e);mesh(box,crane,root,[6.2,2.65,-1.8],[.13,3.3,.13]);mesh(box,crane,root,[5.3,4.25,-1.8],[3.6,.14,.14]);mesh(box,dark,root,[3.8,3.65,-1.8],[.035,1.2,.035]);
+      for(let i=0;i<3;i++)mesh(box,stoneMat,root,[-7+i*.65,1.1,2],[.5,.25,.7]);
+    }else if(cfg.id==='b'){
+      path([[-6,1],[-5.6,2.5],[-3.8,3.3],[-1,3.4],[.5,3]],.4);pergola(0,0);bench(0,-.9);
+      for(const x of [-4.5,-2.2,2.6,4.7]){mesh(box,roof,root,[x,2.1,.95],[1.55,.12,.7]);for(let i=0;i<4;i++)flowers.push({p:[x-.5+i*.33,1.23,3.25],s:[.16,.2,.16]});}
+    }else if(cfg.id==='c'){
+      path([[-6,1],[-5.2,-.3],[-3.8,-.8],[-2,-.9],[0,-.85],[2,-.8],[4,-.5],[6,1]],.5);
+      pergola(-5.5,.7);bench(5.6,.3,.3);bench(-5,-.2);
+      for(let i=0;i<14;i++){const t=i/13*Math.PI;flowers.push({p:[Math.cos(t)*5,1.14,-3.4-Math.sin(t)*.6],s:[.17,.18,.17]});}
+    }else if(cfg.id==='d'){
+      makeBuilding(-5.4,-2.7,1.5,1.6,1.1);
+      for(let i=0;i<3;i++)mesh(box,i===1?roof:dark,root,[5.3,1.35,1.1+i*.65],[1.3,.65,.5]);
+      for(const x of [-2.8,.3]){const hub=new THREE.Group();hub.position.set(x,x<0?4.75:6.95,-1.6);root.add(hub);mesh(cylinder,dark,hub,[0,0,0],[.35,.12,.35]);for(let i=0;i<3;i++){const blade=mesh(box,glass,hub,[0,.1,0],[.12,.06,.65]);blade.rotation.y=i*Math.PI/3;}fans.push(hub);}
+      for(const x of [-3,0,3])mesh(box,walls,root,[x+.7,.1,6.4],[.5,.35,1.4]);
+    }else{
+      for(const x of [-5.3,-4.2,-3.1])for(const z of [-3.7,-4.4])panels.push({p:[x,1.25,z],s:[.85,.12,.48],rot:-.15});
+      path([[-4,2],[-5,1],[-5,-.2]],.4);pergola(-3.3,2.6);bench(2.8,4);
+      for(let i=0;i<3;i++)mesh(box,leafLight,root,[5+i*.35,1.02+i*.035,-1.2],[.28,.18,2.4]);
+    }
+    instances(box,wood,details,root);instances(box,dark,panels,root);instances(sphere,stoneMat,stones,root,!isMobile);instances(sphere,leafLight,shrubs,root,!isMobile);instances(sphere,flowerMat,flowers,root,!isMobile);instances(sphere,leafLight,hillocks,root,false);instances(cone,leaf,pines,root);
     instances(box,walls,buildings,root);instances(box,roof,roofs,root);instances(box,glass,windows,root);
-    instances(cylinder,wood,trunks,root);instances(sphere,leaf,crowns,root);instances(sphere,leafLight,crowns2,root);
+    instances(cylinder,wood,trunks,root);instances(sphere,leaf,crowns,root);instances(sphere,leafLight,crowns2,root,!isMobile);
+    // Static props with a shared geometry/material render together. Root-local
+    // matrices preserve every existing path, roof and terrace placement exactly.
+    // Nested fan assemblies remain separate so their animation is unchanged.
+    const propBatches=new Map();
+    for(const child of [...root.children]){
+      if(!child.isMesh||child.isInstancedMesh)continue;
+      const key=`${child.geometry.uuid}:${child.material.uuid}:${child.castShadow}`;
+      if(!propBatches.has(key))propBatches.set(key,[]);
+      propBatches.get(key).push(child);
+    }
+    for(const props of propBatches.values()){
+      if(props.length<2)continue;
+      const first=props[0],batch=new THREE.InstancedMesh(first.geometry,first.material,props.length);
+      batch.castShadow=first.castShadow;batch.receiveShadow=first.receiveShadow;
+      props.forEach((prop,i)=>{prop.updateMatrix();batch.setMatrixAt(i,prop.matrix);root.remove(prop);});
+      batch.computeBoundingSphere();root.add(batch);
+    }
     root.traverse(o=>{if(o.isMesh){o.userData.islandId=cfg.id;if(!pickables.includes(o))pickables.push(o);}});
     const button=document.createElement('button');button.type='button';button.className='island-marker';button.dataset.island=cfg.id;
     button.innerHTML=`<span class="island-marker-letter">${cfg.id.toUpperCase()}</span><span>${cfg.title}</span>`;
@@ -146,7 +220,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   function setActive(groupIds=ISLANDS.map(v=>v.id),edges=[]){
     active=new Set(groupIds);currentEdges=edges;
     for(const [id,{own}] of islandData){const selected=active.has(id);for(const {m,color} of own){m.color.copy(color);if(!selected)m.color.lerp(new THREE.Color(0x9ab6ae),.57);if(m.emissive)m.emissive.setHex(selected?0x000000:0x07110e);} }
-    for(const {button} of labels){const selected=active.has(button.dataset.island);button.classList.toggle('is-active',selected);button.style.opacity=selected?'1':'.58';button.setAttribute('aria-pressed',String(selected));}
+    for(const {button} of labels){const selected=active.has(button.dataset.island);button.classList.toggle('is-active',selected);button.style.opacity=selected?'1':'.78';button.setAttribute('aria-pressed',String(selected));}
     routes.clear();for(const r of routeResources)r.dispose();routeResources=[];
     for(const edge of edges){const a=islandData.get(edge.from)?.root.position,b=islandData.get(edge.to)?.root.position;if(!a||!b)continue;
       const start=new THREE.Vector3(a.x,.7,a.z),end=new THREE.Vector3(b.x,.7,b.z),mid=start.clone().lerp(end,.5);mid.y=3.3;
@@ -167,15 +241,16 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
       if(mobile)camera.position.set(0,56,71);else camera.position.set(43,34,46);
       const compact={a:[-10,-15],b:[10,-15],c:[-10,15],d:[10,15],e:[0,0]};
       for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);const label=labels.find(v=>v.button.dataset.island===id);label.point.set(x,0,z+(mobile?6:3));}
-      mobileLayout=mobile;setActive([...active],currentEdges);
+      mobileLayout=mobile;controls.autoRotateSpeed=mobile?.17:.21;setActive([...active],currentEdges);
     }}
   const observer=new ResizeObserver(resize);observer.observe(container);resize();
   const visibilityObserver=new IntersectionObserver(entries=>{inViewport=entries[0].isIntersecting;});visibilityObserver.observe(container);
   const projected=new THREE.Vector3();
-  function animate(time){if(disposed)return;raf=requestAnimationFrame(animate);if(document.hidden||!inViewport){last=time;return;}const dt=Math.min((time-last)/1000,.06);last=time;elapsed+=dt;frames++;if(time-sampleStart>1000){fps=Math.round(frames*1000/(time-sampleStart));frames=0;sampleStart=time;}
+  function animate(time){if(disposed)return;raf=requestAnimationFrame(animate);if(document.hidden||!inViewport){last=time;return;}const dt=Math.min((time-last)/1000,.06);last=time;elapsed+=dt;frames++;if(time-sampleStart>1000){fps=Math.round(frames*1000/(time-sampleStart));frames=0;sampleStart=time;renderer.domElement.dataset.renderMetrics=JSON.stringify({fps,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries});}
+    if(mobileLayout&&tour&&!down){const azimuth=controls.getAzimuthalAngle();if(azimuth>.32)controls.autoRotateSpeed=.17;else if(azimuth<-.32)controls.autoRotateSpeed=-.17;}
     controls.update(dt);
-    if(!reducedMotion){const t=elapsed*.035;boat.position.set(Math.sin(t)*39,-.05,Math.cos(t)*26);boat.rotation.y=Math.atan2(Math.cos(t)*39,-Math.sin(t)*26);wake.material.opacity=.35+Math.sin(elapsed*1.7)*.1;}
-    else {boat.position.set(8,-.05,21);boat.rotation.y=.8;}
+    if(!reducedMotion){const t=elapsed*.035;boat.position.set(Math.sin(t)*43,-.05,Math.cos(t)*34);boat.rotation.y=Math.atan2(Math.cos(t)*43,-Math.sin(t)*34);if(seaMat.userData.shader)seaMat.userData.shader.uniforms.coastTime.value=elapsed*.12;for(const f of fans)f.rotation.y=elapsed*.8;for(const foam of ripples)foam.material.opacity=.42+Math.sin(elapsed*.9)*.08;wake.material.opacity=.35+Math.sin(elapsed*1.7)*.1;}
+    else {boat.position.set(8,-.05,32);boat.rotation.y=.8;}
     const placed=[];
     const projectedLabels=labels.map(label=>{projected.copy(label.point).project(camera);const bw=label.button.offsetWidth||120,bh=label.button.offsetHeight||42;return {label,bw,bh,x:Math.max(8,Math.min(width-bw-8,(projected.x*.5+.5)*width-bw/2)),y:Math.max(8,Math.min(height-bh-8,(-projected.y*.5+.5)*height+(width<600?14:22)))};}).sort((a,b)=>a.y-b.y);
     for(const entry of projectedLabels){let {label,bw,bh,x,y}=entry;
@@ -192,6 +267,6 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   return {
     setActive,setTour(value){tour=Boolean(value)&&!reducedMotion;controls.autoRotate=tour;},resize,
     getMetrics(){return {fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,pixelRatio:renderer.getPixelRatio(),islands:5,tour,active:[...active]};},
-    dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button} of labels)button.remove();for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
+    dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button} of labels)button.remove();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
   };
 }
