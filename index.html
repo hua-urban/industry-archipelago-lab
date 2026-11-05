@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#eef5f2">
+  <meta name="description" content="五座產業島，共同回應生活與事業的需求。探索地主改建、老屋活化、傳承安居、商用空間與房產事業的跨組連結。">
+  <title>產業共域｜五島，一起找到下一步</title>
+  <link rel="icon" href="./favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="./style.css">
+  <script type="importmap">{"imports":{"three":"./lib/three.module.js"}}</script>
+</head>
+<body>
+  <a class="skip-link" href="#explore">跳至群島與主題</a>
+  <header class="masthead">
+    <a class="brand" href="./" aria-label="產業共域首頁"><span class="brand-mark">⌁</span><span>產業共域<small>HUA URBAN · ARCHIPELAGO</small></span></a>
+    <nav aria-label="網站導覽"><a href="#explore">五島探索</a><a href="#connections">跨組連結</a><a href="https://hua-urban.com/industry-islands/">原群島總覽 ↗</a></nav>
+  </header>
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-copy"><p class="eyebrow"><span></span> FIVE ISLANDS, ONE SHARED HORIZON</p><h1 id="hero-title">從一個需要，<br>找到一起前進的人。</h1><p class="lead">改建、活化、安居、空間與事業。<br>五座各有特色的島，在共同的需求上相遇。</p></div>
+      <div class="hero-note"><span>獨立探索版</span><p>從海域看見關係，<br>進入島嶼認識專業。</p></div>
+    </section>
+    <section class="atlas" aria-label="五島動態海域">
+      <div class="map-heading"><div><span class="eyebrow">THE SHARED SEA</span><h2>讓需求，成為連結的航線</h2></div><span class="map-count">05 <small>ISLANDS</small> / 40 <small>TOPICS</small></span></div>
+      <div id="scene" class="scene"><p id="scene-status" class="scene-status" role="status">正在展開五座島嶼…</p></div>
+      <div id="map-needs" class="map-needs" role="group" aria-label="海域航線篩選"></div>
+      <div class="map-tools"><span class="map-hint">拖曳轉動・雙指縮放・點島嶼探索</span><div><button id="tour" type="button" aria-pressed="true">暫停自動導覽</button><button id="motion" type="button" aria-pressed="false">減少動態</button></div></div>
+      <div class="map-caption"><span class="compass" aria-hidden="true">N ↑</span><p id="map-caption">五座島各自成形，沿著需求找到彼此。</p><span class="sea-coordinate">HUA URBAN / 2026</span></div>
+    </section>
+    <section id="connections" class="connections" aria-labelledby="connection-title">
+      <div class="section-intro"><p class="eyebrow">FOLLOW A NEED</p><h2 id="connection-title">你想先解決什麼？</h2><p>選一個方向，看見哪些島能一起接棒。</p></div>
+      <div id="needs" class="needs" role="group" aria-label="依共同需求篩選"></div>
+      <div class="connection-summary"><p id="need-description" aria-live="polite"></p><span id="route-count"></span></div>
+      <div id="route-list" class="route-list"></div>
+      <button type="button" id="more-routes" class="text-button" aria-expanded="false">展開全部連結 ↓</button>
+      <p class="scope-note">航線呈現需求轉接的方向；實際服務範圍與合作分工，請由各組夥伴確認。</p>
+    </section>
+    <section id="explore" class="explore" aria-labelledby="explore-title">
+      <div class="section-intro"><p class="eyebrow">FIND YOUR ISLAND</p><h2 id="explore-title">每座島，都有自己的專長</h2><p>選擇一組，再進入你關心的主題。</p></div>
+      <div id="group-tabs" class="group-tabs" role="group" aria-label="選擇產業組別"></div>
+      <article id="group-detail" class="group-detail" aria-live="polite"></article>
+    </section>
+    <aside class="about"><div><p class="eyebrow">A NEW WAY TO CONNECT</p><h2>各自發光，也能彼此成就。</h2></div><p>這是五組產業鏈的獨立動態總覽。各組的完整介紹與操作仍在原本的網站；從這裡出發，點選主題就能整頁前往。</p><a href="./CONTENT-AUDIT.md">內容盤點與維護說明 ↗</a></aside>
+  </main>
+  <footer><span>華都更 · 產業共域</span><p>五島探索版 · 2026.11 <a href="https://github.com/hua-urban/industry-archipelago-lab">GitHub 專案 ↗</a></p></footer>
+  <noscript><div class="noscript">請開啟 JavaScript 使用動態總覽，或直接前往各組：<a href="https://hua-urban.com/industry-islands/a/">Ａ組</a>、<a href="https://hua-urban.com/industry-islands/b/">Ｂ組</a>、<a href="https://hua-urban.com/industry-islands/c/">Ｃ組</a>、<a href="https://hua-urban.com/industry-islands/d/">Ｄ組</a>、<a href="https://hua-urban.com/industry-islands/e/">Ｅ組</a>。</div></noscript>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
