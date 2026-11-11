@@ -1,5 +1,6 @@
 import * as THREE from './lib/three.module.js';
 import { OrbitControls } from './lib/OrbitControls.js';
+import { routes as topicRoutes, groups as contentGroups } from './content.js';
 
 const ISLANDS = [
   { id:'a', title:'地主改建', x:-23, z:-15, r:9.1, color:0xc5b185, roof:0xb9a385, seed:11 },
@@ -216,36 +217,97 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     labels.push({button,point:new THREE.Vector3(cfg.x,0,cfg.z+3),x:0,y:0});
     islandData.set(cfg.id,{root,own,cfg});
   }
-  // Route curves skim the water, with small luminous waypoints.
-  const routes=new THREE.Group();scene.add(routes);let routeResources=[], currentEdges=[], routeCurves=[], couriers=[];
+  // A connected backbone uses five existing topic links; demand selection adds its own route.
+  const availablePairs=new Set(topicRoutes.map(route=>contentGroups.filter(g=>route[g.id]).map(g=>g.id).sort().join(':')));
+  const backbonePairs=[['a','b'],['b','d'],['c','d'],['c','e'],['a','e']].filter(pair=>availablePairs.has(pair.join(':')));
+  const routes=new THREE.Group(),network=new THREE.Group();scene.add(routes,network);
+  let routeResources=[],networkResources=[],currentEdges=[],routeCurves=[],couriers=[],portRings=[],traffic=[];
+  function routeCurve(from,to){
+    const a=islandData.get(from),b=islandData.get(to);if(!a||!b)return null;
+    const av=a.root.position,bv=b.root.position,delta=bv.clone().sub(av);delta.y=0;delta.normalize();
+    const shore=(item,direction)=>{const terrain=item.root.children.find(o=>o.geometry?.getAttribute('color')),positions=terrain.geometry.getAttribute('position');let distance=0;for(let i=0;i<positions.count;i++)distance=Math.max(distance,(positions.getX(i)*direction.x+positions.getZ(i)*direction.z)*item.root.scale.x);return distance+1.6;};
+    const start=av.clone().addScaledVector(delta,shore(a,delta)),end=bv.clone().addScaledVector(delta,-shore(b,delta.clone().negate()));
+    const key=[from,to].sort().join(':');
+    // Side docks keep the short central links clear of land and the stable labels.
+    const docks={
+      'a:e':{a:[0,7],e:[-12,0]},
+      'b:e':{b:[0,8],e:[12,0]},
+      'c:e':{c:[12,0],e:[0,10]},
+      'd:e':{d:[-12,0],e:[0,10]}
+    }[key];
+    if(docks){const da=docks[from],db=docks[to];start.copy(av).add(new THREE.Vector3(da[0]*a.root.scale.x,0,da[1]*a.root.scale.x));end.copy(bv).add(new THREE.Vector3(db[0]*b.root.scale.x,0,db[1]*b.root.scale.x));}
+    start.y=end.y=-.10;
+    const mid=start.clone().lerp(end,.5);mid.y=-.10;
+    // Long diagonals pass around the central island rather than through its terrain.
+    const bend=key==='a:d'?30:key==='b:c'?-30:key==='a:b'?-3:key==='c:d'?4:0;
+    mid.x+=-delta.z*bend;mid.z+=delta.x*bend;
+    return new THREE.QuadraticBezierCurve3(start,mid,end);
+  }
+  function rebuildNetwork(){
+    for(const vessel of traffic)scene.remove(vessel.boat);traffic=[];
+    network.clear();for(const resource of networkResources)resource.dispose();networkResources=[];
+    for(const [from,to] of backbonePairs){
+      const curve=routeCurve(from,to);if(!curve)continue;
+      const g=new THREE.TubeGeometry(curve,24,.075,4,false),m=new THREE.MeshBasicMaterial({color:0xc4eee1,transparent:true,opacity:.58,depthWrite:false});
+      networkResources.push(g,m);network.add(new THREE.Mesh(g,m));
+    }
+    for(const [index,pair] of [backbonePairs[0],backbonePairs[1],backbonePairs[2]].entries()){const boat=makeVessel(false);scene.add(boat);traffic.push({boat,curve:routeCurve(...pair),phase:index*.58});}
+    renderer.domElement.dataset.network=JSON.stringify(backbonePairs);
+    renderer.domElement.dataset.trafficBoats=String(traffic.length);
+  }
   function setActive(groupIds=ISLANDS.map(v=>v.id),edges=[]){
     active=new Set(groupIds);currentEdges=edges;
-    for(const [id,{own}] of islandData){const selected=active.has(id);for(const {m,color} of own){m.color.copy(color);if(!selected)m.color.lerp(new THREE.Color(0x9ab6ae),.08);if(m.emissive)m.emissive.setHex(selected?0x000000:0x07110e);} }
-    for(const {button} of labels){const selected=active.has(button.dataset.island);button.classList.toggle('is-active',selected);button.style.opacity=selected?'1':'.78';button.setAttribute('aria-pressed',String(selected));}
-    routes.clear();for(const r of routeResources)r.dispose();routeResources=[];routeCurves=[];couriers=[];
-    for(const edge of edges){const a=islandData.get(edge.from)?.root.position,b=islandData.get(edge.to)?.root.position;if(!a||!b)continue;
-      const start=new THREE.Vector3(a.x,.7,a.z),end=new THREE.Vector3(b.x,.7,b.z),mid=start.clone().lerp(end,.5);mid.y=4.5;
-      const curve=new THREE.QuadraticBezierCurve3(start,mid,end);
-      const g=new THREE.TubeGeometry(curve,32,.065,5,false),m=new THREE.MeshBasicMaterial({color:0xfff1bc,transparent:true,opacity:.85});routeResources.push(g,m);routes.add(new THREE.Mesh(g,m));
+    for(const [id,{own}] of islandData){const selected=active.has(id);for(const {m,color} of own){m.color.copy(color);if(!selected)m.color.lerp(new THREE.Color(0x9ab6ae),.08);if(m.emissive)m.emissive.setHex(selected?0x000000:0x07110e);}}
+    for(const {button} of labels){const selected=active.has(button.dataset.island);button.classList.toggle('is-active',selected);button.style.opacity=selected?'1':'.85';button.setAttribute('aria-pressed',String(selected));}
+    routes.clear();for(const resource of routeResources)resource.dispose();routeResources=[];routeCurves=[];couriers=[];portRings=[];
+    const resourceMesh=(g,m)=>{routeResources.push(g,m);const o=new THREE.Mesh(g,m);routes.add(o);return o;};
+    for(const edge of edges){
+      const curve=routeCurve(edge.from,edge.to);if(!curve)continue;
+      // A dark underlay separates the warm active channel from the pale network.
+      resourceMesh(new THREE.TubeGeometry(curve,32,.25,6,false),new THREE.MeshBasicMaterial({color:0x28695e}));
+      resourceMesh(new THREE.TubeGeometry(curve,32,.15,6,false),new THREE.MeshBasicMaterial({color:0xffdc75}));
       routeCurves.push(curve);
-      const cg=new THREE.SphereGeometry(.30,7,5),cm=new THREE.MeshBasicMaterial({color:0xffffff});
-      routeResources.push(cg,cm);const courier=new THREE.Mesh(cg,cm);routes.add(courier);couriers.push(courier);
+      const courier=makeVessel(true);routes.add(courier);couriers.push(courier);
+      for(const t of [.3,.7]){
+        const arrow=resourceMesh(new THREE.ConeGeometry(.48,1.2,3),new THREE.MeshBasicMaterial({color:0xfff1b5}));
+        arrow.position.copy(curve.getPoint(t));arrow.position.y+=.22;
+        const tangent=curve.getTangent(t).multiplyScalar(t<.5?1:-1);arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),tangent.normalize());
+      }
+      for(const t of [0,1])for(let ring=0;ring<2;ring++){
+        const port=resourceMesh(new THREE.RingGeometry(.65+ring*.55,.88+ring*.55,24),new THREE.MeshBasicMaterial({color:0xffde80,transparent:true,opacity:ring?.5:1,side:THREE.DoubleSide,depthWrite:false}));
+        port.rotation.x=-Math.PI/2;port.position.copy(curve.getPoint(t));port.position.y=-.02;port.userData.phase=ring*.5;portRings.push(port);
+      }
     }
+    renderer.domElement.dataset.activeRoutes=JSON.stringify(edges);
   }
-  const boat=new THREE.Group(),boatMat=material(0xf2e9ce),boatWood=material(0x8b6347);
-  mesh(box,boatWood,boat,[0,0,0],[.7,.22,1.75]);mesh(box,boatMat,boat,[0,.36,.12],[.53,.5,.9]);
-  mesh(box,boatMat,boat,[0,.67,.1],[.68,.12,1.05]);scene.add(boat);
-  const wakeMat=new THREE.LineBasicMaterial({color:0xe2f0df,transparent:true,opacity:.48});mats.add(wakeMat);
-  const wake=new THREE.LineSegments(geo(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.3,-.1,-1),new THREE.Vector3(-.8,-.1,-3.4),new THREE.Vector3(.3,-.1,-1),new THREE.Vector3(.8,-.1,-3.4)])),wakeMat);boat.add(wake);
+  const hullShape=new THREE.Shape();hullShape.moveTo(-.44,-.9);hullShape.lineTo(.44,-.9);hullShape.lineTo(.48,.45);hullShape.lineTo(0,1.1);hullShape.lineTo(-.48,.45);hullShape.closePath();
+  const hullGeometry=geo(new THREE.ExtrudeGeometry(hullShape,{depth:.22,bevelEnabled:false}));hullGeometry.rotateX(Math.PI/2);hullGeometry.translate(0,.22,0);
+  const vesselWhite=material(0xfff9dc),vesselGold=material(0xf6c85c),vesselPale=material(0xd6e7d5),vesselGlass=material(0x387a7c);
+  const vesselWakeGeometry=geo(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.26,0,-1),new THREE.Vector3(-.8,0,-3),new THREE.Vector3(.26,0,-1),new THREE.Vector3(.8,0,-3)]));
+  const vesselWakeMaterial=new THREE.LineBasicMaterial({color:0xe8fff0,transparent:true,opacity:.72});mats.add(vesselWakeMaterial);
+  function makeVessel(highlight){
+    const boat=new THREE.Group();boat.scale.setScalar(highlight?1.7:1.2);
+    mesh(hullGeometry,highlight?vesselGold:vesselPale,boat);
+    mesh(box,vesselWhite,boat,[0,.43,-.18],[.6,.5,.82]);
+    mesh(box,vesselGlass,boat,[0,.49,.245],[.42,.19,.025]);
+    mesh(box,highlight?vesselGold:vesselWhite,boat,[0,.72,-.18],[.73,.11,1]);
+    const wake=new THREE.LineSegments(vesselWakeGeometry,vesselWakeMaterial);wake.position.y=-.05;boat.add(wake);return boat;
+  }
+  function sail(boat,curve,phase=0,highlight=false){
+    const cycle=reducedMotion?(highlight?.5:phase%1):(elapsed*(highlight?.25:.12)+phase)%2;
+    const forward=cycle<=1,t=forward?cycle:2-cycle;
+    boat.position.copy(curve.getPoint(t));boat.position.y+=.02;
+    const tangent=curve.getTangent(t).multiplyScalar(forward?1:-1);boat.rotation.y=Math.atan2(tangent.x,tangent.z);
+  }
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;
   const pointerDown=e=>{down={x:e.clientX,y:e.clientY};};
   const pointerUp=e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>7){down=null;return;}down=null;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(pickables,false)[0];if(hit)onSelect(hit.object.userData.islandId);};
   renderer.domElement.addEventListener('pointerdown',pointerDown);renderer.domElement.addEventListener('pointerup',pointerUp);
-  function resize(){if(disposed)return;const rect=container.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);camera.aspect=width/height;camera.fov=width<600?50:40;camera.updateProjectionMatrix();renderer.setSize(width,height,false);const mobile=width<600;if(mobile!==mobileLayout){
+  function resize(){if(disposed)return;delete renderer.domElement.dataset.terrainBounds;const rect=container.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);camera.aspect=width/height;camera.fov=width<600?50:40;camera.updateProjectionMatrix();renderer.setSize(width,height,false);const mobile=width<600;if(mobile!==mobileLayout){
       if(mobile){camera.position.set(0,70,48);controls.target.set(0,0,-3);}else{camera.position.set(0,48,65);controls.target.set(0,0,0);}
-      const compact={a:[-11,-19],b:[11,-19],c:[-11,17],d:[11,17],e:[0,-1]};
-      for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);item.root.scale.setScalar(mobile?.65:1);const label=labels.find(v=>v.button.dataset.island===id);label.point.set(x,0,z+(mobile?0:5));}
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?1.25:1.5));renderer.shadowMap.enabled=false;mobileLayout=mobile;controls.autoRotate=!mobile&&tour;controls.enableRotate=!mobile;controls.enableZoom=!mobile;renderer.domElement.style.touchAction=mobile?'pan-y':'none';controls.autoRotateSpeed=.17;setActive([...active],currentEdges);
+      const compact={a:[-12.5,-19],b:[12.5,-19],c:[-12.5,17],d:[12.5,17],e:[0,-1]};
+      for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);item.root.scale.setScalar(mobile?.83:1.2);const label=labels.find(v=>v.button.dataset.island===id);label.point.set(x,0,z+(mobile?0:5));}
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?1.25:1.5));renderer.shadowMap.enabled=false;mobileLayout=mobile;controls.autoRotate=!mobile&&tour;controls.enableRotate=!mobile;controls.enableZoom=!mobile;renderer.domElement.style.touchAction=mobile?'pan-y':'none';controls.autoRotateSpeed=.17;rebuildNetwork();setActive([...active],currentEdges);
     }}
   const observer=new ResizeObserver(resize);observer.observe(container);resize();
   const visibilityObserver=new IntersectionObserver(entries=>{inViewport=entries[0].isIntersecting;});visibilityObserver.observe(container);
@@ -253,9 +315,10 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   function animate(time){if(disposed)return;raf=requestAnimationFrame(animate);if(document.hidden||!inViewport){last=time;return;}const dt=Math.min((time-last)/1000,.06);last=time;if(tour)elapsed+=dt;frames++;if(time-sampleStart>1000){fps=Math.round(frames*1000/(time-sampleStart));frames=0;sampleStart=time;renderer.domElement.dataset.renderMetrics=JSON.stringify({fps,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries});}
     if(!mobileLayout&&tour&&!down){const azimuth=controls.getAzimuthalAngle();if(azimuth>.20)controls.autoRotateSpeed=.17;else if(azimuth<-.20)controls.autoRotateSpeed=-.17;}
     controls.update(dt);
-    if(!reducedMotion){const t=elapsed*.035;boat.position.set(Math.sin(t)*43,-.05,Math.cos(t)*34);boat.rotation.y=Math.atan2(Math.cos(t)*43,-Math.sin(t)*34);if(seaMat.userData.shader)seaMat.userData.shader.uniforms.coastTime.value=elapsed*.12;for(const f of fans)f.rotation.y=elapsed*.8;for(const foam of ripples)foam.material.opacity=.42+Math.sin(elapsed*.9)*.08;wake.material.opacity=.35+Math.sin(elapsed*1.7)*.1;}
-    else {boat.position.set(8,-.05,32);boat.rotation.y=.8;}
-    for(let i=0;i<couriers.length;i++)couriers[i].position.copy(routeCurves[i].getPoint(reducedMotion?.5:(elapsed*.10)%1));
+    if(!reducedMotion){if(seaMat.userData.shader)seaMat.userData.shader.uniforms.coastTime.value=elapsed*.12;for(const f of fans)f.rotation.y=elapsed*.8;for(const foam of ripples)foam.material.opacity=.42+Math.sin(elapsed*.9)*.08;}
+    for(let i=0;i<couriers.length;i++)sail(couriers[i],routeCurves[i],0,true);
+    for(const vessel of traffic)sail(vessel.boat,vessel.curve,vessel.phase);
+    for(const ring of portRings){const pulse=reducedMotion?0:(elapsed*.6+ring.userData.phase)%1;ring.scale.setScalar(1+pulse*.55);ring.material.opacity=(1-pulse*.6)*(ring.userData.phase?.65:1);}
     const placed=[];
     const projectedLabels=labels.map(label=>{projected.copy(label.point).project(camera);const bw=label.button.offsetWidth||120,bh=label.button.offsetHeight||42;return {label,bw,bh,x:Math.max(8,Math.min(width-bw-8,(projected.x*.5+.5)*width-bw/2)),y:Math.max(8,Math.min(height-bh-8,(-projected.y*.5+.5)*height+(width<600?-65:22)))};}).sort((a,b)=>a.y-b.y);
     for(const entry of projectedLabels){let {label,bw,bh,x,y}=entry;
@@ -266,12 +329,22 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
       x=Math.round(x);y=Math.round(Math.min(height-bh-8,y));placed.push({x,y,w:bw,h:bh});if(x!==label.x||y!==label.y){label.button.style.transform=`translate3d(${x}px,${y}px,0)`;label.x=x;label.y=y;}}
 
     renderer.render(scene,camera);
+    if(!renderer.domElement.dataset.terrainBounds){
+      const bounds={};
+      for(const [id,item] of islandData){
+        const terrain=item.root.children.find(o=>o.geometry?.getAttribute('color'));
+        const positions=terrain.geometry.getAttribute('position'),point=new THREE.Vector3();let minX=Infinity,maxX=-Infinity,minY=Infinity,maxY=-Infinity;
+        for(let i=0;i<positions.count;i++){point.fromBufferAttribute(positions,i).applyMatrix4(terrain.matrixWorld).project(camera);const x=(point.x*.5+.5)*width,y=(-point.y*.5+.5)*height;minX=Math.min(minX,x);maxX=Math.max(maxX,x);minY=Math.min(minY,y);maxY=Math.max(maxY,y);}
+        bounds[id]={x:minX,y:minY,width:maxX-minX,height:maxY-minY};
+      }
+      renderer.domElement.dataset.terrainBounds=JSON.stringify(bounds);
+    }
   }
   setActive();raf=requestAnimationFrame(animate);
   const contextLost=e=>{e.preventDefault();onError(new Error('3D 場景暫時無法顯示，請重新整理頁面。'));};renderer.domElement.addEventListener('webglcontextlost',contextLost);
   return {
-    setActive,setTour(value){tour=Boolean(value)&&!reducedMotion;controls.autoRotate=tour&&!mobileLayout;},resize,
+    setActive,setTour(value){tour=Boolean(value)&&!reducedMotion;controls.autoRotate=tour&&!mobileLayout;if(!tour){controls.enableDamping=false;controls.update();controls.enableDamping=true;}},resize,
     getMetrics(){return {fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,pixelRatio:renderer.getPixelRatio(),islands:5,tour,active:[...active]};},
-    dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button} of labels)button.remove();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
+    dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button} of labels)button.remove();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();for(const r of networkResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
   };
 }
