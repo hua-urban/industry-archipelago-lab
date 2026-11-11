@@ -1,5 +1,6 @@
 import * as THREE from './lib/three.module.js';
 import { OrbitControls } from './lib/OrbitControls.js';
+import { sampleVesselMotion } from './vessel-motion.js';
 import { routes as topicRoutes, groups as contentGroups } from './content.js';
 
 const ISLANDS = [
@@ -251,7 +252,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     curve.docks=[{shore:coast(a,start),port:start},{shore:coast(b,end),port:end}];return curve;
   }
   function rebuildNetwork(){
-    for(const vessel of traffic)scene.remove(vessel.boat);traffic=[];
+    for(const vessel of traffic){scene.remove(vessel.boat);disposeVessel(vessel.boat);}traffic=[];
     network.clear();for(const resource of networkResources)resource.dispose();networkResources=[];
     for(const [from,to] of backbonePairs){
       const curve=routeCurve(from,to);if(!curve)continue;
@@ -266,7 +267,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     active=new Set(groupIds);currentEdges=edges;
     for(const [id,{own}] of islandData){const selected=active.has(id);for(const {m,color} of own){m.color.copy(color);if(!selected)m.color.lerp(new THREE.Color(0x9ab6ae),.08);if(m.emissive)m.emissive.setHex(selected?0x000000:0x07110e);}}
     for(const {button} of labels){const selected=active.has(button.dataset.island);button.classList.toggle('is-active',selected);button.style.opacity=selected?'1':'.85';button.setAttribute('aria-pressed',String(selected));}
-    routes.clear();for(const resource of routeResources)resource.dispose();routeResources=[];routeCurves=[];couriers=[];portRings=[];
+    for(const boat of couriers)disposeVessel(boat);routes.clear();for(const resource of routeResources)resource.dispose();routeResources=[];routeCurves=[];couriers=[];portRings=[];
     const resourceMesh=(g,m)=>{routeResources.push(g,m);const o=new THREE.Mesh(g,m);routes.add(o);return o;};
     for(const edge of edges){
       const curve=routeCurve(edge.from,edge.to);if(!curve)continue;
@@ -307,13 +308,17 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     mesh(box,vesselWhite,boat,[0,.43,-.18],[.6,.5,.82]);
     mesh(box,vesselGlass,boat,[0,.49,.245],[.42,.19,.025]);
     mesh(box,highlight?vesselGold:vesselWhite,boat,[0,.72,-.18],[.73,.11,1]);
-    const wake=new THREE.LineSegments(vesselWakeGeometry,vesselWakeMaterial);wake.position.y=-.05;boat.add(wake);return boat;
+    const wakeMaterial=vesselWakeMaterial.clone();mats.add(wakeMaterial);const wake=new THREE.LineSegments(vesselWakeGeometry,wakeMaterial);wake.position.y=-.05;boat.add(wake);boat.userData.wake=wake;return boat;
   }
+  function disposeVessel(boat){const m=boat.userData.wake?.material;if(m){mats.delete(m);m.dispose();}}
   function sail(boat,curve,phase=0,highlight=false){
-    const cycle=reducedMotion?(highlight?.5:phase%1):(elapsed*(highlight?.25:.12)+phase)%2;
-    const forward=cycle<=1,progress=forward?cycle:2-cycle,trim=Math.min(.27,(boat.scale.x*1.1+1.0)/curve.getLength()),t=trim+progress*(1-2*trim);
-    boat.position.copy(curve.getPoint(t));boat.position.y+=.02;
-    const tangent=curve.getTangent(t).multiplyScalar(forward?1:-1);boat.rotation.y=Math.atan2(tangent.x,tangent.z);
+    const motion=reducedMotion?{state:'still',progress:highlight?.5:phase%1,headingOffset:0,speedFraction:0}:sampleVesselMotion(elapsed,phase,highlight);
+    const trim=Math.min(.27,(boat.scale.x*1.1+1.0)/curve.getLength()),t=trim+motion.progress*(1-2*trim);
+    boat.position.copy(curve.getPointAt(t));boat.position.y+=.02;
+    const tangent=curve.getTangentAt(t);boat.rotation.y=Math.atan2(tangent.x,tangent.z)+motion.headingOffset;
+    const wake=boat.userData.wake;wake.visible=motion.speedFraction>.025;wake.material.opacity=.72*motion.speedFraction;
+    wake.scale.z=.3+.7*motion.speedFraction;wake.position.z=-(1-wake.scale.z);
+    boat.userData.motion=motion;
   }
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;
   const pointerDown=e=>{down={x:e.clientX,y:e.clientY};};
