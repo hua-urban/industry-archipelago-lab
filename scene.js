@@ -219,7 +219,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   }
   // A connected backbone uses five existing topic links; demand selection adds its own route.
   const availablePairs=new Set(topicRoutes.map(route=>contentGroups.filter(g=>route[g.id]).map(g=>g.id).sort().join(':')));
-  const backbonePairs=[['a','b'],['b','d'],['c','d'],['c','e'],['a','e']].filter(pair=>availablePairs.has(pair.join(':')));
+  const backbonePairs=[['a','b'],['b','d'],['c','d'],['c','e'],['a','e'],['a','c']].filter(pair=>availablePairs.has(pair.join(':')));
   const routes=new THREE.Group(),network=new THREE.Group();scene.add(routes,network);
   let routeResources=[],networkResources=[],currentEdges=[],routeCurves=[],couriers=[],portRings=[],traffic=[];
   function routeCurve(from,to){
@@ -236,22 +236,29 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
       'd:e':{d:[-12,0],e:[0,10]}
     }[key];
     if(docks){const da=docks[from],db=docks[to];start.copy(av).add(new THREE.Vector3(da[0]*a.root.scale.x,0,da[1]*a.root.scale.x));end.copy(bv).add(new THREE.Vector3(db[0]*b.root.scale.x,0,db[1]*b.root.scale.x));}
-    start.y=end.y=-.10;
-    const mid=start.clone().lerp(end,.5);mid.y=-.10;
+    start.y=end.y=.08;
+    const mid=start.clone().lerp(end,.5);mid.y=.08;
     // Long diagonals pass around the central island rather than through its terrain.
     const bend=key==='a:d'?30:key==='b:c'?-30:key==='a:b'?-3:key==='c:d'?4:0;
     mid.x+=-delta.z*bend;mid.z+=delta.x*bend;
-    return new THREE.QuadraticBezierCurve3(start,mid,end);
+    const curve=new THREE.QuadraticBezierCurve3(start,mid,end);
+    const coast=(item,point)=>{
+      const direction=point.clone().sub(item.root.position);direction.y=0;direction.normalize();
+      const positions=item.root.children.find(o=>o.geometry?.getAttribute('color')).geometry.getAttribute('position'),n=positions.count/5;let hit=0;
+      for(let i=0;i<n;i++){const j=(i+1)%n,ax=positions.getX(2*n+i)*item.root.scale.x,az=positions.getZ(2*n+i)*item.root.scale.x,bx=positions.getX(2*n+j)*item.root.scale.x,bz=positions.getZ(2*n+j)*item.root.scale.x,ex=bx-ax,ez=bz-az,den=direction.x*ez-direction.z*ex;if(Math.abs(den)<.00001)continue;const t=(ax*ez-az*ex)/den,u=(ax*direction.z-az*direction.x)/den;if(t>=0&&u>=0&&u<=1)hit=Math.max(hit,t);}
+      const anchor=item.root.position.clone().addScaledVector(direction,Math.max(0,hit-.65));anchor.y=.28;return anchor;
+    };
+    curve.docks=[{shore:coast(a,start),port:start},{shore:coast(b,end),port:end}];return curve;
   }
   function rebuildNetwork(){
     for(const vessel of traffic)scene.remove(vessel.boat);traffic=[];
     network.clear();for(const resource of networkResources)resource.dispose();networkResources=[];
     for(const [from,to] of backbonePairs){
       const curve=routeCurve(from,to);if(!curve)continue;
-      const g=new THREE.TubeGeometry(curve,24,.075,4,false),m=new THREE.MeshBasicMaterial({color:0xc4eee1,transparent:true,opacity:.58,depthWrite:false});
-      networkResources.push(g,m);network.add(new THREE.Mesh(g,m));
+      const g=new THREE.TubeGeometry(curve,32,.17,6,false),m=new THREE.MeshBasicMaterial({color:0xd6f1dc,transparent:true,opacity:.92,depthWrite:false});
+      networkResources.push(g,m);network.add(new THREE.Mesh(g,m));addDocks(curve,network,false);
     }
-    for(const [index,pair] of [backbonePairs[0],backbonePairs[1],backbonePairs[2]].entries()){const boat=makeVessel(false);scene.add(boat);traffic.push({boat,curve:routeCurve(...pair),phase:index*.58});}
+    for(const [index,pair] of [['a','c'],['b','d'],['a','e']].entries()){const boat=makeVessel(false);scene.add(boat);traffic.push({boat,curve:routeCurve(...pair),phase:index*.58});}
     renderer.domElement.dataset.network=JSON.stringify(backbonePairs);
     renderer.domElement.dataset.trafficBoats=String(traffic.length);
   }
@@ -263,9 +270,10 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     const resourceMesh=(g,m)=>{routeResources.push(g,m);const o=new THREE.Mesh(g,m);routes.add(o);return o;};
     for(const edge of edges){
       const curve=routeCurve(edge.from,edge.to);if(!curve)continue;
+      if(!backbonePairs.some(pair=>pair.join(':')===[edge.from,edge.to].sort().join(':')))addDocks(curve,routes,true);
       // A dark underlay separates the warm active channel from the pale network.
-      resourceMesh(new THREE.TubeGeometry(curve,32,.25,6,false),new THREE.MeshBasicMaterial({color:0x28695e})).position.y=-.25;
-      resourceMesh(new THREE.TubeGeometry(curve,32,.15,6,false),new THREE.MeshBasicMaterial({color:0xffdc75}));
+      resourceMesh(new THREE.TubeGeometry(curve,40,.38,6,false),new THREE.MeshBasicMaterial({color:0x28695e})).position.y=-.34;
+      resourceMesh(new THREE.TubeGeometry(curve,40,.27,6,false),new THREE.MeshBasicMaterial({color:0xffdc75}));
       routeCurves.push(curve);
       const courier=makeVessel(true);routes.add(courier);couriers.push(courier);
       for(const t of [.3,.7]){
@@ -274,11 +282,19 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
         const tangent=curve.getTangent(t).multiplyScalar(t<.5?1:-1);arrow.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),tangent.normalize());
       }
       for(const t of [0,1])for(let ring=0;ring<2;ring++){
-        const port=resourceMesh(new THREE.RingGeometry(.65+ring*.55,.88+ring*.55,24),new THREE.MeshBasicMaterial({color:0xffde80,transparent:true,opacity:ring?.5:1,side:THREE.DoubleSide,depthWrite:false}));
-        port.rotation.x=-Math.PI/2;port.position.copy(curve.getPoint(t));port.position.y=-.02;port.userData.phase=ring*.5;portRings.push(port);
+        const port=resourceMesh(new THREE.RingGeometry(.9+ring*.55,1.2+ring*.55,24),new THREE.MeshBasicMaterial({color:0xffde80,transparent:true,opacity:ring?.5:1,side:THREE.DoubleSide,depthWrite:false}));
+        port.rotation.x=-Math.PI/2;port.position.copy(curve.getPoint(t));port.position.y=.14;port.userData.phase=ring*.5;portRings.push(port);
       }
     }
     renderer.domElement.dataset.activeRoutes=JSON.stringify(edges);
+  }
+  const dockTimber=material(0xddbb79),dockCap=material(0xffedbf);
+  function addDocks(curve,parent,highlight){
+    for(const {shore,port} of curve.docks){
+      const delta=port.clone().sub(shore),length=Math.hypot(delta.x,delta.z);
+      const pier=mesh(box,dockTimber,parent,[(shore.x+port.x)/2,.28,(shore.z+port.z)/2],[.85,.32,length+.2]);pier.rotation.y=Math.atan2(delta.x,delta.z);
+      mesh(cylinder,dockCap,parent,[port.x,.29,port.z],[1.15,.32,1.15]);
+    }
   }
   const hullShape=new THREE.Shape();hullShape.moveTo(-.44,-.9);hullShape.lineTo(.44,-.9);hullShape.lineTo(.48,.45);hullShape.lineTo(0,1.1);hullShape.lineTo(-.48,.45);hullShape.closePath();
   const hullGeometry=geo(new THREE.ExtrudeGeometry(hullShape,{depth:.22,bevelEnabled:false}));hullGeometry.rotateX(Math.PI/2);hullGeometry.translate(0,.22,0);
@@ -286,7 +302,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   const vesselWakeGeometry=geo(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.26,0,-1),new THREE.Vector3(-.8,0,-3),new THREE.Vector3(.26,0,-1),new THREE.Vector3(.8,0,-3)]));
   const vesselWakeMaterial=new THREE.LineBasicMaterial({color:0xe8fff0,transparent:true,opacity:.72});mats.add(vesselWakeMaterial);
   function makeVessel(highlight){
-    const boat=new THREE.Group();boat.scale.setScalar(highlight?1.7:1.2);
+    const boat=new THREE.Group();boat.scale.setScalar(highlight?2.55:1.85);
     mesh(hullGeometry,highlight?vesselGold:vesselPale,boat);
     mesh(box,vesselWhite,boat,[0,.43,-.18],[.6,.5,.82]);
     mesh(box,vesselGlass,boat,[0,.49,.245],[.42,.19,.025]);
@@ -295,7 +311,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   }
   function sail(boat,curve,phase=0,highlight=false){
     const cycle=reducedMotion?(highlight?.5:phase%1):(elapsed*(highlight?.25:.12)+phase)%2;
-    const forward=cycle<=1,t=forward?cycle:2-cycle;
+    const forward=cycle<=1,progress=forward?cycle:2-cycle,trim=Math.min(.27,(boat.scale.x*1.1+1.0)/curve.getLength()),t=trim+progress*(1-2*trim);
     boat.position.copy(curve.getPoint(t));boat.position.y+=.02;
     const tangent=curve.getTangent(t).multiplyScalar(forward?1:-1);boat.rotation.y=Math.atan2(tangent.x,tangent.z);
   }
@@ -320,7 +336,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     for(const vessel of traffic)sail(vessel.boat,vessel.curve,vessel.phase);
     for(const ring of portRings){const pulse=reducedMotion?0:(elapsed*.6+ring.userData.phase)%1;ring.scale.setScalar(1+pulse*.55);ring.material.opacity=(1-pulse*.6)*(ring.userData.phase?.65:1);}
     const placed=[];
-    const projectedLabels=labels.map(label=>{projected.copy(label.point).project(camera);const bw=label.button.offsetWidth||120,bh=label.button.offsetHeight||42;return {label,bw,bh,x:Math.max(8,Math.min(width-bw-8,(projected.x*.5+.5)*width-bw/2)),y:Math.max(8,Math.min(height-bh-8,(-projected.y*.5+.5)*height+(width<600?-65:22)))};}).sort((a,b)=>a.y-b.y);
+    const projectedLabels=labels.map(label=>{projected.copy(label.point).project(camera);const bw=label.button.offsetWidth||120,bh=label.button.offsetHeight||42;return {label,bw,bh,x:Math.max(8,Math.min(width-bw-8,(projected.x*.5+.5)*width-bw/2)),y:Math.max(8,Math.min(height-bh-8,(-projected.y*.5+.5)*height+(width<600?(['c','d'].includes(label.button.dataset.island)?30:-65):22)))};}).sort((a,b)=>a.y-b.y);
     for(const entry of projectedLabels){let {label,bw,bh,x,y}=entry;
       for(let pass=0;pass<5;pass++){const clash=placed.find(r=>x<r.x+r.w+8&&x+bw+8>r.x&&y<r.y+r.h+5&&y+bh+5>r.y);if(!clash)break;
         if(clash.y+clash.h+bh+13<height)y=clash.y+clash.h+6;

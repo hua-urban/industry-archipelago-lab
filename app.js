@@ -76,7 +76,7 @@ async function buildScene() {
   scene?.dispose();
   scene = undefined;
   try {
-    factory ||= (await import('./scene.js?v=harbors4b')).createArchipelago;
+    factory ||= (await import('./scene.js?v=docks5')).createArchipelago;
     if (version !== rebuilding) return;
     scene = factory({container: $('scene'), reducedMotion, onSelect: id => selectGroup(id,true), onError: showFallback});
     $('tour').disabled = false;
