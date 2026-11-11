@@ -19,7 +19,7 @@ jobs:
           sparse-checkout: automation
       - uses: actions/setup-node@v4
         with:
-          node-version: '24'
+          node-version: '24.22.2'
       - name: 檢查程式及排程的停用端點
         run: node _backend-guard/automation/check-backend-contracts.mjs --root . --source-only
       - name: 核對正式服務
