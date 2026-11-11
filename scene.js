@@ -2,11 +2,11 @@ import * as THREE from './lib/three.module.js';
 import { OrbitControls } from './lib/OrbitControls.js';
 
 const ISLANDS = [
-  { id:'a', title:'地主改建', x:-18, z:-12, r:9.1, color:0xc5b185, roof:0xb9a385, seed:11 },
-  { id:'b', title:'老屋現金流', x:16, z:-13, r:7.8, color:0xd7bd8d, roof:0xb96749, seed:23 },
-  { id:'c', title:'傳承安居', x:-23, z:12, r:8.8, color:0xb9c7a0, roof:0x879e87, seed:37 },
-  { id:'d', title:'商用空間', x:23, z:11, r:8.0, color:0xa4bba6, roof:0x4a8585, seed:49 },
-  { id:'e', title:'房產與事業', x:0, z:1, r:7.9, color:0x9bb58b, roof:0x65886d, seed:61 }
+  { id:'a', title:'地主改建', x:-23, z:-15, r:9.1, color:0xc5b185, roof:0xb9a385, seed:11 },
+  { id:'b', title:'老屋現金流', x:21, z:-16, r:7.8, color:0xd7bd8d, roof:0xb96749, seed:23 },
+  { id:'c', title:'傳承安居', x:-24, z:17, r:8.8, color:0xb9c7a0, roof:0x879e87, seed:37 },
+  { id:'d', title:'商用空間', x:24, z:17, r:8.0, color:0xa4bba6, roof:0x4a8585, seed:49 },
+  { id:'e', title:'房產成長', x:0, z:1, r:7.9, color:0x9bb58b, roof:0x65886d, seed:61 }
 ];
 const rng = seed => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 export function createArchipelago({container,onSelect=()=>{},onError=()=>{},reducedMotion=false}) {
@@ -16,13 +16,13 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   const scene=new THREE.Scene();
   scene.background=new THREE.Color(0xbdd6d4);
   const camera=new THREE.PerspectiveCamera(40,1,0.2,350);
-  camera.position.set(43,34,46);
-  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'high-performance'});
-  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+  camera.position.set(0,48,65);
+  const renderer=new THREE.WebGLRenderer({antialias:true,alpha:false,powerPreference:'low-power'});
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,container.clientWidth<600?1.25:1.5));
   renderer.outputColorSpace=THREE.SRGBColorSpace;
   renderer.toneMapping=THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure=1.03;
-  renderer.shadowMap.enabled=true;
+  renderer.shadowMap.enabled=false;
   renderer.shadowMap.type=THREE.PCFShadowMap;
   renderer.domElement.className='scene-canvas';
   renderer.domElement.style.cssText='display:block;width:100%;height:100%;touch-action:none;';
@@ -31,8 +31,9 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   controls.target.set(0,0,0); controls.enableDamping=true; controls.dampingFactor=.065;
   controls.minDistance=47;controls.maxDistance=145;controls.maxPolarAngle=1.24;controls.minPolarAngle=.35;
   controls.autoRotate=tour;controls.autoRotateSpeed=.21;
-  controls.enablePan=true;controls.screenSpacePanning=false;controls.maxTargetRadius=15;
+  controls.enablePan=false;controls.screenSpacePanning=false;controls.maxTargetRadius=15;
   controls.touches.ONE=THREE.TOUCH.ROTATE;controls.touches.TWO=THREE.TOUCH.DOLLY_PAN;
+  if(container.clientWidth<600){controls.enableRotate=false;controls.enableZoom=false;renderer.domElement.style.touchAction='pan-y';}
   scene.add(new THREE.HemisphereLight(0xe9f2df,0x526e69,1.8));
   const sun=new THREE.DirectionalLight(0xffedcf,2.8);sun.position.set(-28,65,25);scene.add(sun);
   sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-48;sun.shadow.camera.right=48;
@@ -80,7 +81,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     const contour=shape.getPoints(112);if(contour[0].distanceTo(contour.at(-1))<.001)contour.pop();
     const n=contour.length, terrainPositions=[],terrainColors=[],terrainIndices=[];
     const shoreRandom=rng(cfg.seed), shoreNoise=contour.map((v,i)=>Math.sin(i*.63+cfg.seed)*.018+Math.sin(i*.19)*.022);
-    const groundColors=[new THREE.Color(cfg.id==='a'?0xa6ac72:cfg.id==='b'?0x8f9c62:0x66905b),new THREE.Color(0x82a366),new THREE.Color(0xd6c28e),new THREE.Color(0xa59d7d),new THREE.Color(0x657e73)];
+    const groundColors=[new THREE.Color(cfg.id==='a'?0xa2a477:cfg.id==='b'?0xa5a36d:cfg.id==='c'?0x8caf73:cfg.id==='d'?0x88a99c:0x7fa566),new THREE.Color(0x82a366),new THREE.Color(0xd6c28e),new THREE.Color(0xa59d7d),new THREE.Color(0x657e73)];
     const ringScales=[.82,.94,1.015,1.055,1.08], ringHeights=[.99,.87,.17,-.12,-.48];
     for(let ring=0;ring<5;ring++)for(let i=0;i<n;i++){
       const v=contour[i], noise=shoreNoise[i], scale=ringScales[ring]+(ring?noise:0);
@@ -216,16 +217,19 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     islandData.set(cfg.id,{root,own,cfg});
   }
   // Route curves skim the water, with small luminous waypoints.
-  const routes=new THREE.Group();scene.add(routes);let routeResources=[], currentEdges=[];
+  const routes=new THREE.Group();scene.add(routes);let routeResources=[], currentEdges=[], routeCurves=[], couriers=[];
   function setActive(groupIds=ISLANDS.map(v=>v.id),edges=[]){
     active=new Set(groupIds);currentEdges=edges;
-    for(const [id,{own}] of islandData){const selected=active.has(id);for(const {m,color} of own){m.color.copy(color);if(!selected)m.color.lerp(new THREE.Color(0x9ab6ae),.57);if(m.emissive)m.emissive.setHex(selected?0x000000:0x07110e);} }
+    for(const [id,{own}] of islandData){const selected=active.has(id);for(const {m,color} of own){m.color.copy(color);if(!selected)m.color.lerp(new THREE.Color(0x9ab6ae),.08);if(m.emissive)m.emissive.setHex(selected?0x000000:0x07110e);} }
     for(const {button} of labels){const selected=active.has(button.dataset.island);button.classList.toggle('is-active',selected);button.style.opacity=selected?'1':'.78';button.setAttribute('aria-pressed',String(selected));}
-    routes.clear();for(const r of routeResources)r.dispose();routeResources=[];
+    routes.clear();for(const r of routeResources)r.dispose();routeResources=[];routeCurves=[];couriers=[];
     for(const edge of edges){const a=islandData.get(edge.from)?.root.position,b=islandData.get(edge.to)?.root.position;if(!a||!b)continue;
-      const start=new THREE.Vector3(a.x,.7,a.z),end=new THREE.Vector3(b.x,.7,b.z),mid=start.clone().lerp(end,.5);mid.y=3.3;
+      const start=new THREE.Vector3(a.x,.7,a.z),end=new THREE.Vector3(b.x,.7,b.z),mid=start.clone().lerp(end,.5);mid.y=4.5;
       const curve=new THREE.QuadraticBezierCurve3(start,mid,end);
-      const g=new THREE.TubeGeometry(curve,36,.095,5,false),m=new THREE.MeshBasicMaterial({color:0xffe9a5,transparent:true,opacity:.94});routeResources.push(g,m);routes.add(new THREE.Mesh(g,m));
+      const g=new THREE.TubeGeometry(curve,32,.065,5,false),m=new THREE.MeshBasicMaterial({color:0xfff1bc,transparent:true,opacity:.85});routeResources.push(g,m);routes.add(new THREE.Mesh(g,m));
+      routeCurves.push(curve);
+      const cg=new THREE.SphereGeometry(.30,7,5),cm=new THREE.MeshBasicMaterial({color:0xffffff});
+      routeResources.push(cg,cm);const courier=new THREE.Mesh(cg,cm);routes.add(courier);couriers.push(courier);
     }
   }
   const boat=new THREE.Group(),boatMat=material(0xf2e9ce),boatWood=material(0x8b6347);
@@ -237,24 +241,25 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   const pointerDown=e=>{down={x:e.clientX,y:e.clientY};};
   const pointerUp=e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>7){down=null;return;}down=null;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(pickables,false)[0];if(hit)onSelect(hit.object.userData.islandId);};
   renderer.domElement.addEventListener('pointerdown',pointerDown);renderer.domElement.addEventListener('pointerup',pointerUp);
-  function resize(){if(disposed)return;const rect=container.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);camera.aspect=width/height;camera.fov=width<600?55:40;camera.updateProjectionMatrix();renderer.setSize(width,height,false);const mobile=width<600;if(mobile!==mobileLayout){
-      if(mobile)camera.position.set(0,56,71);else camera.position.set(43,34,46);
-      const compact={a:[-10,-15],b:[10,-15],c:[-10,15],d:[10,15],e:[0,0]};
-      for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);const label=labels.find(v=>v.button.dataset.island===id);label.point.set(x,0,z+(mobile?6:3));}
-      mobileLayout=mobile;controls.autoRotateSpeed=mobile?.17:.21;setActive([...active],currentEdges);
+  function resize(){if(disposed)return;const rect=container.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);camera.aspect=width/height;camera.fov=width<600?50:40;camera.updateProjectionMatrix();renderer.setSize(width,height,false);const mobile=width<600;if(mobile!==mobileLayout){
+      if(mobile){camera.position.set(0,70,48);controls.target.set(0,0,-3);}else{camera.position.set(0,48,65);controls.target.set(0,0,0);}
+      const compact={a:[-11,-19],b:[11,-19],c:[-11,17],d:[11,17],e:[0,-1]};
+      for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);item.root.scale.setScalar(mobile?.65:1);const label=labels.find(v=>v.button.dataset.island===id);label.point.set(x,0,z+(mobile?0:5));}
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?1.25:1.5));renderer.shadowMap.enabled=false;mobileLayout=mobile;controls.autoRotate=!mobile&&tour;controls.enableRotate=!mobile;controls.enableZoom=!mobile;renderer.domElement.style.touchAction=mobile?'pan-y':'none';controls.autoRotateSpeed=.17;setActive([...active],currentEdges);
     }}
   const observer=new ResizeObserver(resize);observer.observe(container);resize();
   const visibilityObserver=new IntersectionObserver(entries=>{inViewport=entries[0].isIntersecting;});visibilityObserver.observe(container);
   const projected=new THREE.Vector3();
-  function animate(time){if(disposed)return;raf=requestAnimationFrame(animate);if(document.hidden||!inViewport){last=time;return;}const dt=Math.min((time-last)/1000,.06);last=time;elapsed+=dt;frames++;if(time-sampleStart>1000){fps=Math.round(frames*1000/(time-sampleStart));frames=0;sampleStart=time;renderer.domElement.dataset.renderMetrics=JSON.stringify({fps,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries});}
-    if(mobileLayout&&tour&&!down){const azimuth=controls.getAzimuthalAngle();if(azimuth>.32)controls.autoRotateSpeed=.17;else if(azimuth<-.32)controls.autoRotateSpeed=-.17;}
+  function animate(time){if(disposed)return;raf=requestAnimationFrame(animate);if(document.hidden||!inViewport){last=time;return;}const dt=Math.min((time-last)/1000,.06);last=time;if(tour)elapsed+=dt;frames++;if(time-sampleStart>1000){fps=Math.round(frames*1000/(time-sampleStart));frames=0;sampleStart=time;renderer.domElement.dataset.renderMetrics=JSON.stringify({fps,calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries});}
+    if(!mobileLayout&&tour&&!down){const azimuth=controls.getAzimuthalAngle();if(azimuth>.20)controls.autoRotateSpeed=.17;else if(azimuth<-.20)controls.autoRotateSpeed=-.17;}
     controls.update(dt);
     if(!reducedMotion){const t=elapsed*.035;boat.position.set(Math.sin(t)*43,-.05,Math.cos(t)*34);boat.rotation.y=Math.atan2(Math.cos(t)*43,-Math.sin(t)*34);if(seaMat.userData.shader)seaMat.userData.shader.uniforms.coastTime.value=elapsed*.12;for(const f of fans)f.rotation.y=elapsed*.8;for(const foam of ripples)foam.material.opacity=.42+Math.sin(elapsed*.9)*.08;wake.material.opacity=.35+Math.sin(elapsed*1.7)*.1;}
     else {boat.position.set(8,-.05,32);boat.rotation.y=.8;}
+    for(let i=0;i<couriers.length;i++)couriers[i].position.copy(routeCurves[i].getPoint(reducedMotion?.5:(elapsed*.10)%1));
     const placed=[];
-    const projectedLabels=labels.map(label=>{projected.copy(label.point).project(camera);const bw=label.button.offsetWidth||120,bh=label.button.offsetHeight||42;return {label,bw,bh,x:Math.max(8,Math.min(width-bw-8,(projected.x*.5+.5)*width-bw/2)),y:Math.max(8,Math.min(height-bh-8,(-projected.y*.5+.5)*height+(width<600?14:22)))};}).sort((a,b)=>a.y-b.y);
+    const projectedLabels=labels.map(label=>{projected.copy(label.point).project(camera);const bw=label.button.offsetWidth||120,bh=label.button.offsetHeight||42;return {label,bw,bh,x:Math.max(8,Math.min(width-bw-8,(projected.x*.5+.5)*width-bw/2)),y:Math.max(8,Math.min(height-bh-8,(-projected.y*.5+.5)*height+(width<600?-65:22)))};}).sort((a,b)=>a.y-b.y);
     for(const entry of projectedLabels){let {label,bw,bh,x,y}=entry;
-      for(let pass=0;pass<(width<600?0:5);pass++){const clash=placed.find(r=>x<r.x+r.w+8&&x+bw+8>r.x&&y<r.y+r.h+5&&y+bh+5>r.y);if(!clash)break;
+      for(let pass=0;pass<5;pass++){const clash=placed.find(r=>x<r.x+r.w+8&&x+bw+8>r.x&&y<r.y+r.h+5&&y+bh+5>r.y);if(!clash)break;
         if(clash.y+clash.h+bh+13<height)y=clash.y+clash.h+6;
         else {const right=clash.x+clash.w+8;x=right+bw+8<width?right:Math.max(8,clash.x-bw-8);}
       }
@@ -265,7 +270,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   setActive();raf=requestAnimationFrame(animate);
   const contextLost=e=>{e.preventDefault();onError(new Error('3D 場景暫時無法顯示，請重新整理頁面。'));};renderer.domElement.addEventListener('webglcontextlost',contextLost);
   return {
-    setActive,setTour(value){tour=Boolean(value)&&!reducedMotion;controls.autoRotate=tour;},resize,
+    setActive,setTour(value){tour=Boolean(value)&&!reducedMotion;controls.autoRotate=tour&&!mobileLayout;},resize,
     getMetrics(){return {fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,pixelRatio:renderer.getPixelRatio(),islands:5,tour,active:[...active]};},
     dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button} of labels)button.remove();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
   };

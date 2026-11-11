@@ -5,27 +5,30 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="theme-color" content="#eef5f2">
   <meta name="description" content="五座產業島，共同回應生活與事業的需求。探索地主改建、老屋活化、傳承安居、商用空間與房產事業的跨組連結。">
-  <title>產業共域｜五島，一起找到下一步</title>
+  <title>華都更產業共域｜讓專業相連，讓商機共生</title>
   <link rel="icon" href="./favicon.svg" type="image/svg+xml">
-  <link rel="stylesheet" href="./style.css?v=natural2">
+  <link rel="stylesheet" href="./style.css?v=relay3">
   <script type="importmap">{"imports":{"three":"./lib/three.module.js"}}</script>
 </head>
 <body>
   <a class="skip-link" href="#explore">跳至群島與主題</a>
   <header class="masthead">
-    <a class="brand" href="./" aria-label="產業共域首頁"><span class="brand-mark">⌁</span><span>產業共域<small>HUA URBAN · ARCHIPELAGO</small></span></a>
+    <a class="brand" href="./" aria-label="華都更產業共域首頁"><span class="brand-mark">⌁</span><span>華都更<small>HUA URBAN · ARCHIPELAGO</small></span></a>
     <nav aria-label="網站導覽"><a href="#explore">五島探索</a><a href="#connections">跨組連結</a><a href="https://hua-urban.com/industry-islands/">原群島總覽 ↗</a></nav>
   </header>
   <main>
     <section class="hero" aria-labelledby="hero-title">
-      <div class="hero-copy"><p class="eyebrow"><span></span> FIVE ISLANDS, ONE SHARED HORIZON</p><h1 id="hero-title">從一個需要，<br>找到一起前進的人。</h1><p class="lead">改建、活化、安居、空間與事業。<br>五座各有特色的島，在共同的需求上相遇。</p></div>
-      <div class="hero-note"><span>獨立探索版</span><p>從海域看見關係，<br>進入島嶼認識專業。</p></div>
+      <div class="hero-copy"><p class="eyebrow"><span></span> 華都更 · 五條產業鏈，一片共生海域</p><h1 id="hero-title">華都更，<br>讓專業相連，<em>讓商機共生。</em></h1><p class="lead">五條產業鏈，從一個需求開始，找到一起接棒的夥伴。</p><a class="hero-action" href="#connections">從我的需求出發 <span>↗</span></a></div>
+      <div class="hero-note"><span>01 / 看見專業　02 / 找到連結　03 / 一起接棒</span><p>每座島，各有專長。<br>每段合作，都從理解需要開始。</p></div>
     </section>
+    <section class="path-entry" aria-label="選擇合作起點"><div><p class="eyebrow">TWO WAYS TO COLLABORATE</p><h2>從哪一步，開始合作？</h2></div><div class="path-buttons"><button type="button" data-path="case" aria-pressed="true"><span>01</span><strong>有案子・共同承接</strong><small>從現有需求，找到一起交付的夥伴</small></button><button type="button" data-path="develop" aria-pressed="false"><span>02</span><strong>有機會・共同開發</strong><small>從目標客群，規劃聯合行動</small></button></div></section>
     <section class="atlas" aria-label="五島動態海域">
-      <div class="map-heading"><div><span class="eyebrow">THE SHARED SEA</span><h2>讓需求，成為連結的航線</h2></div><span class="map-count">05 <small>ISLANDS</small> / 40 <small>TOPICS</small></span></div>
+      <div class="map-heading"><div><span class="eyebrow">THE SHARED SEA</span><h2>五座島，一起回應一個需求</h2></div><span class="map-count">五島共域 <small>協作探索版</small></span></div>
       <div id="scene" class="scene"><p id="scene-status" class="scene-status" role="status">正在展開五座島嶼…</p></div>
+      <div class="relay-panel" aria-live="polite"><div class="relay-label"><span class="live-dot"></span> 需求接棒示意 <span id="relay-position"></span></div><div id="relay-content"></div><div class="relay-controls"><button id="relay-prev" type="button" aria-label="上一條接棒航線">←</button><button id="relay-next" type="button" aria-label="下一條接棒航線">→</button></div></div>
+      <div id="workflow" class="workflow-strip" aria-live="polite"></div>
       <div id="map-needs" class="map-needs" role="group" aria-label="海域航線篩選"></div>
-      <div class="map-tools"><span class="map-hint">拖曳轉動・雙指縮放・點島嶼探索</span><div><button id="tour" type="button" aria-pressed="true">暫停自動導覽</button><button id="motion" type="button" aria-pressed="false">減少動態</button></div></div>
+      <div class="map-tools"><span class="map-hint">點島嶼看專業・選需求看接棒</span><div><button id="tour" type="button" aria-pressed="true">暫停海域動態</button><button id="motion" type="button" aria-pressed="false">減少動態</button></div></div>
       <div class="map-caption"><span class="compass" aria-hidden="true">N ↑</span><p id="map-caption">五座島各自成形，沿著需求找到彼此。</p><span class="sea-coordinate">HUA URBAN / 2026</span></div>
     </section>
     <section id="connections" class="connections" aria-labelledby="connection-title">
@@ -34,6 +37,7 @@
       <div class="connection-summary"><p id="need-description" aria-live="polite"></p><span id="route-count"></span></div>
       <div id="route-list" class="route-list"></div>
       <button type="button" id="more-routes" class="text-button" aria-expanded="false">展開全部連結 ↓</button>
+      <details class="blueprint-note"><summary>合作開始前，先把四件事談清楚 <span>＋</span></summary><div class="agreement-grid"><p><b>01　角色與範圍</b>誰主責？各自承接什麼？</p><p><b>02　費用與分攤</b>投入與費用如何約定？</p><p><b>03　客戶溝通</b>誰是窗口？誰負責回報？</p><p><b>04　退場與轉介</b>無法接續時，怎麼交接？</p></div><p class="blueprint-rhythm"><b>藍圖中的 90 天節奏</b>需求盤點 → 主責與跨島配對 → 明確提案 → 交付與回顧。</p><p class="blueprint-source">依<a href="https://docs.google.com/presentation/d/e/2PACX-1vQq_mS9DLEuSl9DLAA3cxushV_L8MBlrXkDDeymDRh5W8wnYErJgPWz0E1wZKoPtkVvs9dfPkGmwYKs/pub?start=false&amp;loop=false&amp;delayms=3000">《我理想的華都更協作藍圖》與各組簡報 ↗</a>整理。這是合作提案與討論框架，並非已完成的合作成果。</p></details>
       <p class="scope-note">航線呈現需求轉接的方向；實際服務範圍與合作分工，請由各組夥伴確認。</p>
     </section>
     <section id="explore" class="explore" aria-labelledby="explore-title">
@@ -41,10 +45,10 @@
       <div id="group-tabs" class="group-tabs" role="group" aria-label="選擇產業組別"></div>
       <article id="group-detail" class="group-detail" aria-live="polite"></article>
     </section>
-    <aside class="about"><div><p class="eyebrow">A NEW WAY TO CONNECT</p><h2>各自發光，也能彼此成就。</h2></div><p>這是五組產業鏈的獨立動態總覽。各組的完整介紹與操作仍在原本的網站；從這裡出發，點選主題就能整頁前往。</p><a href="./CONTENT-AUDIT.md">內容盤點與維護說明 ↗</a></aside>
+    <aside class="about"><div><p class="eyebrow">A NEW WAY TO CONNECT</p><h2>各自發光，也能彼此成就。</h2></div><p>五條產業鏈，連結各自的專業與資源。先從需求認識合作方向，再進入各組完整島嶼，找到適合接續討論的主題。</p><a href="./CONTENT-AUDIT.md">內容盤點與維護說明 ↗</a></aside>
   </main>
   <footer><span>華都更 · 產業共域</span><p>五島探索版 · 2026.11 <a href="https://github.com/hua-urban/industry-archipelago-lab">GitHub 專案 ↗</a></p></footer>
   <noscript><div class="noscript">請開啟 JavaScript 使用動態總覽，或直接前往各組：<a href="https://hua-urban.com/industry-islands/a/">Ａ組</a>、<a href="https://hua-urban.com/industry-islands/b/">Ｂ組</a>、<a href="https://hua-urban.com/industry-islands/c/">Ｃ組</a>、<a href="https://hua-urban.com/industry-islands/d/">Ｄ組</a>、<a href="https://hua-urban.com/industry-islands/e/">Ｅ組</a>。</div></noscript>
-  <script type="module" src="./app.js?v=natural2"></script>
+  <script type="module" src="./app.js?v=relay3"></script>
 </body>
 </html>

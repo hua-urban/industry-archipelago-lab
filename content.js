@@ -6,9 +6,9 @@ export const groups = [
     id: 'a',
     name: '地主改建整合鏈',
     shortName: '地主改建',
-    tagline: '從社區改建需求出發，整理議題、資料與接續問題。',
-    description: '聚焦地主整合、權利資料、估價、建築規劃、契約、資金、工程材料，以及改建前後的使用交接。',
-    color: '#B5765C',
+    tagline: '先建立地主信任與共識，再把改建需求交到下一棒。',
+    description: 'A 組簡報以地主改建的前兩棒為主軸：先建立信任、凝聚共識，再銜接實施者評估。跨領域專業依案件需要加入，從單點引薦走向跨案協作。',
+    color: '#9b7851',
     url: 'https://hua-urban.com/industry-islands/a/',
     topics: [
       { id: 'owners', title: '社區地主整合與共識準備', short: '地主整合', tagline: '先整理社區關心的事，讓下一次討論有共同起點。' },
@@ -23,11 +23,11 @@ export const groups = [
   },
   {
     id: 'b',
-    name: '老屋現金流協作島',
+    name: '老屋現金流升級鏈',
     shortName: '老屋現金流',
-    tagline: '從房源現況與使用需求，討論老屋活化的下一步。',
-    description: '串聯房源、資金、法律、修繕、招租與日常管理；部分資源在企劃中列為待補或待確認。',
-    color: '#b58460',
+    tagline: '一間老屋的需要，串起房源到營運的不同專業。',
+    description: '陳靖薇組長的 B 組簡報，呈現夥伴之間的水平協作，以及同一房源在不同階段的垂直接續。房源、資金、法律、修繕、招租與管理，依實際需要串聯。',
+    color: '#b46c4b',
     url: 'https://hua-urban.com/industry-islands/b/',
     topics: [
       { id: 'assets', title: '房源開發與使用評估', short: '房源評估', tagline: '先看屋況、使用者與條件，再決定老屋的下一步。' },
@@ -42,11 +42,11 @@ export const groups = [
   },
   {
     id: 'c',
-    name: '資產傳承與高齡安居協作島',
+    name: '高齡安居 × 資產傳承鏈',
     shortName: '傳承安居',
-    tagline: '從家庭傳承與安居需求，整理可進一步詢問的方向。',
-    description: '串聯財務與傳承、房產活化、安居空間及工程供應協作；現有介紹來源未逐一核實夥伴資格與可承接範圍。',
-    color: '#9D8066',
+    tagline: '以家人的安居需求，連結空間、產權與傳承安排。',
+    description: '王春雄組長的 C 組簡報，以老公寓電梯案說明接力：建築師評估可行性，律師協助住戶協商，地政士接續產權與測量議題。案例估算不代表每案成效。',
+    color: '#69856a',
     url: 'https://hua-urban.com/industry-islands/c/',
     topics: [
       { id: 'finance', title: '理財與傳承需求', short: '財務傳承', tagline: '先說清楚家庭想安排什麼，再整理下一步要問誰。' },
@@ -63,9 +63,9 @@ export const groups = [
     id: 'd',
     name: '商用空間協作島',
     shortName: '商用空間',
-    tagline: '從企業空間使用問題，找出下一個要對話的專業。',
-    description: '聚焦據點、企業進駐、設計、建材與工程、節能環境、智慧倉儲、數位管理與跨業共學；主題是資訊架構與協作構想。',
-    color: '#b77d59',
+    tagline: '一案一位主責，讓空間、工程與營運一起對題。',
+    description: 'Naomi／陳向柔組長的 D 組簡報，從每案一位主責開始：先釐清問題，再召集空間、工程、營運夥伴。接續提案、示範案與回顧，是簡報中的推進規劃。',
+    color: '#347e81',
     url: 'https://hua-urban.com/industry-islands/d/',
     topics: [
       { id: 'leasing', title: '據點選址與資產活化', short: '據點與資產', tagline: '先想清楚誰來使用，再決定空間怎麼安排。' },
@@ -80,11 +80,11 @@ export const groups = [
   },
   {
     id: 'e',
-    name: '產業協作島',
-    shortName: '房產與事業',
-    tagline: '從生活與事業需求，連結可討論的專業方向。',
-    description: '整理房產、海外資源、農地廠房、製造設備、AI 商務、財務、人才與跨業共學主題，作為需求辨識與夥伴連結的討論入口。',
-    color: '#df795b',
+    name: '房產客戶成長鏈',
+    shortName: '房產成長',
+    tagline: '從一位房產客戶出發，看見生活與事業的後續需要。',
+    description: 'E 組簡報以房產客戶成長生態圈串聯八個專業領域，延伸海外、土地廠房、設備、財務、人才與 AI 商務。協作情境及 AI 流程屬構想，實際分工仍由夥伴確認。',
+    color: '#547f45',
     url: 'https://hua-urban.com/industry-islands/e/',
     topics: [
       { id: 'property', title: '房產交易與購屋指南', short: '房產交易', tagline: '從想買房，到知道下一步該問什麼。' },
@@ -142,3 +142,12 @@ export const needs = [
     routeNames: ['數位管理', '房務與數位管理']
   }
 ];
+
+// Visual translations of the group presentations; these are motifs, not actual venues.
+export const identities = {
+ a:{motif:'改建街廓',handoff:'信任 → 共識 → 實施者評估',source:'A 組簡報，第 33–36 頁'},
+ b:{motif:'老屋院落',handoff:'橫向連結夥伴，縱向接續一個房源',source:'B 組簡報，第 38–42 頁'},
+ c:{motif:'安居花園',handoff:'建築可行性 → 住戶協商 → 產權議題',source:'C 組簡報，第 43–50 頁'},
+ d:{motif:'商用港灣',handoff:'主責釐清 → 專業召集 → 提案與回顧',source:'D 組簡報，第 51–58 頁'},
+ e:{motif:'成長園區',handoff:'房產需求 → 生活與事業 → 跨域連結',source:'E 組簡報，第 59–63 頁'}
+};
