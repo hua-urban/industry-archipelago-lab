@@ -264,7 +264,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     for(const edge of edges){
       const curve=routeCurve(edge.from,edge.to);if(!curve)continue;
       // A dark underlay separates the warm active channel from the pale network.
-      resourceMesh(new THREE.TubeGeometry(curve,32,.25,6,false),new THREE.MeshBasicMaterial({color:0x28695e}));
+      resourceMesh(new THREE.TubeGeometry(curve,32,.25,6,false),new THREE.MeshBasicMaterial({color:0x28695e})).position.y=-.25;
       resourceMesh(new THREE.TubeGeometry(curve,32,.15,6,false),new THREE.MeshBasicMaterial({color:0xffdc75}));
       routeCurves.push(curve);
       const courier=makeVessel(true);routes.add(courier);couriers.push(courier);
