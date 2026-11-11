@@ -14,6 +14,7 @@ const rng = seed => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return s
 export function createArchipelago({container,onSelect=()=>{},onError=()=>{},reducedMotion=false}) {
   let inViewport=true;
   let disposed=false, raf=0, active=new Set(ISLANDS.map(v=>v.id)), tour=!reducedMotion;
+  let hoveredGroup=null,revealedGroup=null;
   let width=1,height=1, mobileLayout=null, frames=0, elapsed=0,last=performance.now(), sampleStart=last, fps=0;
   const scene=new THREE.Scene();
   scene.background=new THREE.Color(0xbdd6d4);
@@ -211,13 +212,21 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     }
     root.traverse(o=>{if(o.isMesh){o.userData.islandId=cfg.id;if(!pickables.includes(o))pickables.push(o);}});
     const button=document.createElement('button');button.type='button';button.className='island-marker';button.dataset.island=cfg.id;
-    button.innerHTML=`<span class="island-marker-letter">${cfg.id.toUpperCase()}</span><span>${cfg.title}</span>`;
-    button.setAttribute('aria-label',`${cfg.id.toUpperCase()} 島，${cfg.title}`);
+    const fullName=contentGroups.find(group=>group.id===cfg.id).name;
+    const parts=fullName.includes(' × ')?[fullName.split(' × ')[0]+' ×',fullName.split(' × ')[1]]:[fullName.slice(0,4),fullName.slice(4)];
+    button.innerHTML=`<span class="island-marker-letter">${cfg.id.toUpperCase()}</span><span class="island-marker-name"><span>${parts[0]}</span><span>${parts[1]}</span></span>`;
+    button.setAttribute('aria-label',`${cfg.id.toUpperCase()} 組，${fullName}，查看主題`);
     button.style.cssText='position:absolute;left:0;top:0;z-index:3;white-space:nowrap;pointer-events:auto;';
-    button.addEventListener('click',()=>onSelect(cfg.id));container.appendChild(button);
+    button.addEventListener('click',event=>chooseIsland(cfg.id,event.pointerType==='touch'));
+    button.addEventListener('pointerenter',event=>{if(event.pointerType!=='touch')setHovered(cfg.id);});button.addEventListener('pointerleave',()=>setHovered(null));
+    button.addEventListener('focus',()=>setHovered(cfg.id));button.addEventListener('blur',()=>setHovered(null));container.appendChild(button);
     labels.push({button,point:new THREE.Vector3(cfg.x,0,cfg.z+3),x:0,y:0});
     islandData.set(cfg.id,{root,own,cfg});
   }
+  function refreshLabels(){for(const {button} of labels){const id=button.dataset.island,expanded=active.has(id)||hoveredGroup===id||revealedGroup===id;button.classList.toggle('is-expanded',expanded);button.setAttribute('aria-expanded',String(expanded));}}
+  function setHovered(id){hoveredGroup=id;refreshLabels();}
+  function revealGroup(id){revealedGroup=id;refreshLabels();}
+  function chooseIsland(id,touch=false){const secondTap=revealedGroup===id;if(touch)revealGroup(id);onSelect(id,!touch||secondTap);}
   // A connected backbone uses five existing topic links; demand selection adds its own route.
   const availablePairs=new Set(topicRoutes.map(route=>contentGroups.filter(g=>route[g.id]).map(g=>g.id).sort().join(':')));
   const backbonePairs=[['a','b'],['b','d'],['c','d'],['c','e'],['a','e'],['a','c']].filter(pair=>availablePairs.has(pair.join(':')));
@@ -264,9 +273,10 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     renderer.domElement.dataset.trafficBoats=String(traffic.length);
   }
   function setActive(groupIds=ISLANDS.map(v=>v.id),edges=[]){
-    active=new Set(groupIds);currentEdges=edges;
+    active=new Set(groupIds);currentEdges=edges;revealedGroup=null;
     for(const [id,{own}] of islandData){const selected=active.has(id);for(const {m,color} of own){m.color.copy(color);if(!selected)m.color.lerp(new THREE.Color(0x9ab6ae),.08);if(m.emissive)m.emissive.setHex(selected?0x000000:0x07110e);}}
     for(const {button} of labels){const selected=active.has(button.dataset.island);button.classList.toggle('is-active',selected);button.style.opacity=selected?'1':'.85';button.setAttribute('aria-pressed',String(selected));}
+    refreshLabels();
     for(const boat of couriers)disposeVessel(boat);routes.clear();for(const resource of routeResources)resource.dispose();routeResources=[];routeCurves=[];couriers=[];portRings=[];
     const resourceMesh=(g,m)=>{routeResources.push(g,m);const o=new THREE.Mesh(g,m);routes.add(o);return o;};
     for(const edge of edges){
@@ -322,12 +332,15 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   }
   const raycaster=new THREE.Raycaster(),pointer=new THREE.Vector2();let down=null;
   const pointerDown=e=>{down={x:e.clientX,y:e.clientY};};
-  const pointerUp=e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>7){down=null;return;}down=null;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(pickables,false)[0];if(hit)onSelect(hit.object.userData.islandId);};
+  const pointerUp=e=>{if(!down||Math.hypot(e.clientX-down.x,e.clientY-down.y)>7){down=null;return;}down=null;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);const hit=raycaster.intersectObjects(pickables,false)[0];if(hit)chooseIsland(hit.object.userData.islandId,e.pointerType==='touch');};
+  const pointerMove=e=>{if(e.pointerType==='touch'||down)return;const rect=renderer.domElement.getBoundingClientRect();pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);raycaster.setFromCamera(pointer,camera);setHovered(raycaster.intersectObjects(pickables,false)[0]?.object.userData.islandId||null);};
+  const pointerLeave=()=>setHovered(null);
+  renderer.domElement.addEventListener('pointermove',pointerMove);renderer.domElement.addEventListener('pointerleave',pointerLeave);
   renderer.domElement.addEventListener('pointerdown',pointerDown);renderer.domElement.addEventListener('pointerup',pointerUp);
   function resize(){if(disposed)return;delete renderer.domElement.dataset.terrainBounds;const rect=container.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);camera.aspect=width/height;camera.fov=width<600?50:40;camera.updateProjectionMatrix();renderer.setSize(width,height,false);const mobile=width<600;if(mobile!==mobileLayout){
       if(mobile){camera.position.set(0,70,48);controls.target.set(0,0,-3);}else{camera.position.set(0,48,65);controls.target.set(0,0,0);}
       const compact={a:[-12.5,-19],b:[12.5,-19],c:[-12.5,17],d:[12.5,17],e:[0,-1]};
-      for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);item.root.scale.setScalar(mobile?.83:1.2);const label=labels.find(v=>v.button.dataset.island===id);label.point.set(x,0,z+(mobile?0:5));}
+      for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);item.root.scale.setScalar(mobile?.83:1.2);const label=labels.find(v=>v.button.dataset.island===id);const anchor={a:[0,1.3,0],b:[0,1.3,0],c:[0,1.3,-3.3],d:[0,1.3,0],e:[0,1.3,0]}[id];label.point.set(x+anchor[0]*item.root.scale.x,anchor[1]*item.root.scale.x,z+anchor[2]*item.root.scale.x);}
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?1.25:1.5));renderer.shadowMap.enabled=false;mobileLayout=mobile;controls.autoRotate=!mobile&&tour;controls.enableRotate=!mobile;controls.enableZoom=!mobile;renderer.domElement.style.touchAction=mobile?'pan-y':'none';controls.autoRotateSpeed=.17;rebuildNetwork();setActive([...active],currentEdges);
     }}
   const observer=new ResizeObserver(resize);observer.observe(container);resize();
@@ -340,14 +353,8 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     for(let i=0;i<couriers.length;i++)sail(couriers[i],routeCurves[i],0,true);
     for(const vessel of traffic)sail(vessel.boat,vessel.curve,vessel.phase);
     for(const ring of portRings){const pulse=reducedMotion?0:(elapsed*.6+ring.userData.phase)%1;ring.scale.setScalar(1+pulse*.55);ring.material.opacity=(1-pulse*.6)*(ring.userData.phase?.65:1);}
-    const placed=[];
-    const projectedLabels=labels.map(label=>{projected.copy(label.point).project(camera);const bw=label.button.offsetWidth||120,bh=label.button.offsetHeight||42;return {label,bw,bh,x:Math.max(8,Math.min(width-bw-8,(projected.x*.5+.5)*width-bw/2)),y:Math.max(8,Math.min(height-bh-8,(-projected.y*.5+.5)*height+(width<600?(['c','d'].includes(label.button.dataset.island)?30:-65):22)))};}).sort((a,b)=>a.y-b.y);
-    for(const entry of projectedLabels){let {label,bw,bh,x,y}=entry;
-      for(let pass=0;pass<5;pass++){const clash=placed.find(r=>x<r.x+r.w+8&&x+bw+8>r.x&&y<r.y+r.h+5&&y+bh+5>r.y);if(!clash)break;
-        if(clash.y+clash.h+bh+13<height)y=clash.y+clash.h+6;
-        else {const right=clash.x+clash.w+8;x=right+bw+8<width?right:Math.max(8,clash.x-bw-8);}
-      }
-      x=Math.round(x);y=Math.round(Math.min(height-bh-8,y));placed.push({x,y,w:bw,h:bh});if(x!==label.x||y!==label.y){label.button.style.transform=`translate3d(${x}px,${y}px,0)`;label.x=x;label.y=y;}}
+    // All states share the same reserved ground anchor and fixed label frame.
+    for(const label of labels){projected.copy(label.point).project(camera);const x=Math.round((projected.x*.5+.5)*width),y=Math.round((-projected.y*.5+.5)*height);if(x!==label.x||y!==label.y){label.button.style.transform=`translate3d(${x}px,${y}px,0) translate(-50%,-50%)`;label.x=x;label.y=y;}}
 
     renderer.render(scene,camera);
     if(!renderer.domElement.dataset.terrainBounds){
@@ -364,8 +371,8 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   setActive();raf=requestAnimationFrame(animate);
   const contextLost=e=>{e.preventDefault();onError(new Error('3D 場景暫時無法顯示，請重新整理頁面。'));};renderer.domElement.addEventListener('webglcontextlost',contextLost);
   return {
-    setActive,setTour(value){tour=Boolean(value)&&!reducedMotion;controls.autoRotate=tour&&!mobileLayout;if(!tour){controls.enableDamping=false;controls.update();controls.enableDamping=true;}},resize,
+    setActive,setHovered,revealGroup,setTour(value){tour=Boolean(value)&&!reducedMotion;controls.autoRotate=tour&&!mobileLayout;if(!tour){controls.enableDamping=false;controls.update();controls.enableDamping=true;}},resize,
     getMetrics(){return {fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,pixelRatio:renderer.getPixelRatio(),islands:5,tour,active:[...active]};},
-    dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button} of labels)button.remove();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();for(const r of networkResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
+    dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointermove',pointerMove);renderer.domElement.removeEventListener('pointerleave',pointerLeave);renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button} of labels)button.remove();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();for(const r of networkResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
   };
 }

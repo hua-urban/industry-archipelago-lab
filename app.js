@@ -54,6 +54,7 @@ function renderRoutes() {
 function selectGroup(id, scroll = false) {
   if (!groupById.has(id)) return;
   selectedGroup = id;
+  if(matchMedia('(pointer: coarse)').matches)scene?.revealGroup(id);
   const group = groupById.get(id);
   const identity = identities[id];
   document.querySelectorAll('[data-group]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.group === id)));
@@ -76,9 +77,9 @@ async function buildScene() {
   scene?.dispose();
   scene = undefined;
   try {
-    factory ||= (await import('./scene.js?v=docking6')).createArchipelago;
+    factory ||= (await import('./scene.js?v=labels7')).createArchipelago;
     if (version !== rebuilding) return;
-    scene = factory({container: $('scene'), reducedMotion, onSelect: id => selectGroup(id,true), onError: showFallback});
+    scene = factory({container: $('scene'), reducedMotion, onSelect: (id,scroll) => selectGroup(id,scroll), onError: showFallback});
     $('tour').disabled = false;
     $('motion').disabled = false;
     $('scene-status')?.remove();
@@ -108,6 +109,14 @@ $('map-needs').innerHTML = $('needs').innerHTML;
 $('map-needs').addEventListener('click',event=>{const button=event.target.closest('[data-need]');if(button)setNeed(button.dataset.need);});
 $('needs').addEventListener('click',event=>{const button=event.target.closest('[data-need]');if(button)setNeed(button.dataset.need);});
 $('group-tabs').innerHTML = groups.map(group=>`<button type="button" data-group="${group.id}" aria-pressed="false"><span>${group.id.toUpperCase()}</span><strong>${escapeHTML(group.shortName).replace(/^(.{2})(.+)$/,"$1<wbr>$2")}</strong></button>`).join('');
+$('island-directory').innerHTML=groups.map(group=>`<button type="button" data-group="${group.id}" aria-pressed="false"><b>${group.id.toUpperCase()}</b><span>${escapeHTML(group.name)}</span></button>`).join('');
+for(const list of [$('group-tabs'),$('island-directory')]){
+  list.addEventListener('pointerover',event=>{const button=event.target.closest('[data-group]');if(button&&event.pointerType!=='touch')scene?.setHovered(button.dataset.group);});
+  list.addEventListener('pointerout',event=>{const button=event.target.closest('[data-group]');if(button&&!button.contains(event.relatedTarget))scene?.setHovered(null);});
+  list.addEventListener('focusin',event=>{const button=event.target.closest('[data-group]');if(button)scene?.setHovered(button.dataset.group);});
+  list.addEventListener('focusout',()=>scene?.setHovered(null));
+}
+$('island-directory').addEventListener('click',event=>{const button=event.target.closest('[data-group]');if(button)selectGroup(button.dataset.group);});
 $('group-tabs').addEventListener('click',event=>{const button=event.target.closest('[data-group]');if(button)selectGroup(button.dataset.group);});
 document.querySelector('.path-buttons').addEventListener('click',event=>{const button=event.target.closest('[data-path]');if(!button)return;collaborationPath=button.dataset.path;document.querySelectorAll('[data-path]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.path===collaborationPath)));renderWorkflow();});
 $('relay-prev').addEventListener('click',()=>{routeIndex=(routeIndex+visibleRoutes.length-1)%visibleRoutes.length;updateScene();});
