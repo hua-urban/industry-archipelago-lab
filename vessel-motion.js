@@ -1,10 +1,10 @@
 // Analytic timeline: all vessels share the scene clock, so pausing freezes every phase.
-export const DOCK_HOLD_SECONDS = 1.7;
-export const TURN_SECONDS = 1.8;
+export const DOCK_HOLD_SECONDS = 2.0;
+export const TURN_SECONDS = 2.2;
 const ease = t => t*t*t*(t*(6*t-15)+10);
 const easeSpeed = t => 30*t*t*(t-1)*(t-1);
 export function sampleVesselMotion(time, phase = 0, highlight = false) {
-  const travel = highlight ? 5.6 : 8.8;
+  const travel = highlight ? 7.84 : 12.32;
   const leg = travel + DOCK_HOLD_SECONDS + TURN_SECONDS;
   const cycle = ((time + phase*leg) % (2*leg) + 2*leg) % (2*leg);
   const outbound = cycle < leg;

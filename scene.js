@@ -1,14 +1,14 @@
 import * as THREE from './lib/three.module.js';
 import { OrbitControls } from './lib/OrbitControls.js';
-import { sampleVesselMotion } from './vessel-motion.js';
+import { sampleVesselMotion } from './vessel-motion.js?v=native8';
 import { routes as topicRoutes, groups as contentGroups } from './content.js?v=dname8';
 
 const ISLANDS = [
-  { id:'a', title:'地主改建', x:-23, z:-15, r:9.1, color:0xc5b185, roof:0xb9a385, seed:11 },
+  { id:'a', title:'地主改建', x:-23, z:-15, r:9.1, color:0xc5b185, roof:0x536c80, seed:11 },
   { id:'b', title:'老屋現金流', x:21, z:-16, r:7.8, color:0xd7bd8d, roof:0xb96749, seed:23 },
-  { id:'c', title:'傳承安居', x:-24, z:17, r:8.8, color:0xb9c7a0, roof:0x879e87, seed:37 },
-  { id:'d', title:'商用空間', x:24, z:17, r:8.0, color:0xa4bba6, roof:0x4a8585, seed:49 },
-  { id:'e', title:'房產成長', x:0, z:1, r:7.9, color:0x9bb58b, roof:0x65886d, seed:61 }
+  { id:'c', title:'傳承安居', x:-24, z:17, r:8.8, color:0xb9c7a0, roof:0xc6b3d6, seed:37 },
+  { id:'d', title:'商用空間', x:24, z:17, r:8.0, color:0xa4bba6, roof:0xb86c4e, seed:49 },
+  { id:'e', title:'房產成長', x:0, z:1, r:7.9, color:0x9bb58b, roof:0xc37f61, seed:61 }
 ];
 const rng = seed => () => { seed = (seed * 1664525 + 1013904223) >>> 0; return seed / 4294967296; };
 export function createArchipelago({container,onSelect=()=>{},onError=()=>{},reducedMotion=false}) {
@@ -63,7 +63,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   const isMobile=container.clientWidth<600;
   const m4=new THREE.Matrix4(), quat=new THREE.Quaternion(), p=new THREE.Vector3(), s=new THREE.Vector3();
   function instances(g,m,transforms,parent,castShadow=true){if(!transforms.length)return;const inst=new THREE.InstancedMesh(g,m,transforms.length);transforms.forEach((t,i)=>{p.set(...t.p);s.set(...t.s);quat.setFromAxisAngle(THREE.Object3D.DEFAULT_UP,t.rot||0);m4.compose(p,quat,s);inst.setMatrixAt(i,m4);});inst.castShadow=castShadow;inst.receiveShadow=true;parent.add(inst);return inst;}
-  function outline(cfg){
+  function outline(cfg,envelope=false){
     const profiles={
       a:[[-11,-2],[-9,2],[-5,4],[1,5],[7,3],[11,0],[8,-3],[3,-4],[-3,-4]],
       b:[[-8,-2],[-7,3],[-4,5],[-1,3],[2,5],[6,3],[8,0],[6,-4],[3,-5],[1,-3],[-2,-5],[-6,-4]],
@@ -71,15 +71,23 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
       d:[[-8,-4],[-8,2],[-5,5],[1,5],[7,3],[8,-1],[5,-1],[5,-5],[2,-5],[2,-2],[-1,-2],[-1,-5],[-4,-5],[-4,-3]],
       e:[[-9,-1],[-7,4],[-3,6],[1,5],[5,6],[8,3],[9,-1],[6,-4],[2,-5],[-1,-4],[-5,-5],[-8,-3]]
     };
-    const pts=profiles[cfg.id].map(([x,y])=>new THREE.Vector3(x,y,0));
+    const main={
+      a:[[-11,-1.8],[-9,2],[-5,4],[1,5],[7,3],[11,0],[8,-2.4],[3,-2.2],[-3,-2.1],[-8,-1.8]],
+      b:[[-8,-2.3],[-7,3],[-3,5],[2,4],[6,3],[8,0],[6,-2.8],[2,-3],[-3,-2.8],[-6,-2.5]],
+      d:[[-8,-2.8],[-8,2],[-5,5],[1,5],[7,3],[8,0],[6,-2.8],[2,-3],[-3,-2.9],[-6,-2.6]],
+      e:[[-9,-2.2],[-7,4],[-3,6],[2,5],[7,3],[9,0],[7,-2.8],[2,-2.9],[-3,-2.8],[-7,-2.3]]
+    };
+    const pts=(envelope?profiles[cfg.id]:main[cfg.id]||profiles[cfg.id]).map(([x,y])=>new THREE.Vector3(x,y,0));
     const curve=new THREE.CatmullRomCurve3(pts,true,'centripetal');
     return new THREE.Shape(curve.getPoints(128).map(v=>new THREE.Vector2(v.x,v.y)));
   }
   for(const cfg of ISLANDS){
     const root=new THREE.Group();root.position.set(cfg.x,0,cfg.z);scene.add(root);
     const own=[];const mat=(color,opts)=>{const m=material(color,opts);own.push({m,color:m.color.clone()});return m;};
-    const sand=mat(0xe3d4ac),rock=mat(0x879a83),land=mat(cfg.color),road=mat(0xe5ddc5),walls=mat(0xece7d2),roof=mat(cfg.roof),glass=mat(0x8fb5b1,{roughness:.28,metalness:.1}),wood=mat(0x967b58),leaf=mat(cfg.id==='c'?0x718c6a:0x547955),leafLight=mat(0x88a16b);
+    const sand=mat(0xe3d4ac),rock=mat(0x879a83),land=mat(cfg.color),road=mat(0xe5ddc5),walls=mat(cfg.id==='c'?0xb09ac3:0xece7d2),roof=mat(cfg.roof),glass=mat(0x8fb5b1,{roughness:.28,metalness:.1}),wood=mat(0x967b58),leaf=mat(cfg.id==='c'?0x718c6a:0x547955),leafLight=mat(0x88a16b);
     const shape=outline(cfg);
+    const nav=outline(cfg,true).getPoints(112);if(nav[0].distanceTo(nav.at(-1))<.001)nav.pop();
+    const navigationPoints=nav.map((v,i)=>{const sc=1.08+Math.sin(i*.63+cfg.seed)*.018+Math.sin(i*.19)*.022;return {x:v.x*sc,z:-v.y*sc};});
     // One continuous terrain skin: flat settlement, grassy shoulder, tapered beach, submerged rock.
     const contour=shape.getPoints(112);if(contour[0].distanceTo(contour.at(-1))<.001)contour.pop();
     const n=contour.length, terrainPositions=[],terrainColors=[],terrainIndices=[];
@@ -94,6 +102,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     for(let ring=0;ring<4;ring++)for(let i=0;i<n;i++){const j=(i+1)%n,a=ring*n+i,b=ring*n+j,c=(ring+1)*n+i,d=(ring+1)*n+j;terrainIndices.push(a,c,b,b,c,d);}
     for(const tri of THREE.ShapeUtils.triangulateShape(contour,[]))terrainIndices.push(tri[2],tri[1],tri[0]);
     const terrainGeo=geo(new THREE.BufferGeometry());terrainGeo.setAttribute('position',new THREE.Float32BufferAttribute(terrainPositions,3));terrainGeo.setAttribute('color',new THREE.Float32BufferAttribute(terrainColors,3));terrainGeo.setIndex(terrainIndices);terrainGeo.computeVertexNormals();
+    const landContours=[contour.map((v,i)=>[v.x*(1.015+shoreNoise[i]),-v.y*(1.015+shoreNoise[i])])];
     const ground=mesh(terrainGeo,mat(0xffffff,{vertexColors:true,side:THREE.DoubleSide}),root);ground.userData.islandId=cfg.id;pickables.push(ground);
     const shoalPositions=[],shoalIndices=[];
     for(const scale of [1.045,1.17,1.31])for(let i=0;i<n;i++){const v=contour[i];shoalPositions.push(v.x*(scale+shoreNoise[i]),-.365,-v.y*(scale+shoreNoise[i]));}
@@ -116,52 +125,59 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     function bench(x,z,r=0){details.push({p:[x,1.3,z],s:[.95,.16,.38],rot:r});for(const dx of [-.32,.32])details.push({p:[x+dx,1.12,z],s:[.1,.26,.3],rot:r});}
     function pergola(x,z){for(const dx of [-.85,.85])for(const dz of [-.6,.6])details.push({p:[x+dx,1.75,z+dz],s:[.1,1.5,.1]});for(let i=0;i<6;i++)details.push({p:[x-.95+i*.38,2.54,z],s:[.12,.12,1.65]});}
 
-    // A compact civic grid, with a sculpted skyline and a central promenade.
+    function islet(x,z,rx,rz){
+      mesh(cylinder,sand,root,[x,.48,z],[rx*1.10,.85,rz*1.10]);mesh(cylinder,land,root,[x,.94,z],[rx,.14,rz]);
+      landContours.push(Array.from({length:24},(_,i)=>[x+Math.cos(i/24*Math.PI*2)*rx*1.10,z+Math.sin(i/24*Math.PI*2)*rz*1.10]));
+    }
+    const hipRoof=geo(new THREE.ConeGeometry(1,1,4));
+    function home(x,z,w,d,h){makeBuilding(x,z,w,d,h);const r=mesh(hipRoof,roof,root,[x,1+h+.32,z],[w*.75,.68,d*.75]);r.rotation.y=Math.PI/4;}
+    function pavilion(x,z){for(const dx of [-.65,.65])for(const dz of [-.45,.45])mesh(cylinder,wood,root,[x+dx,1.65,z+dz],[.08,1.3,.08]);const r=mesh(hipRoof,leaf,root,[x,2.45,z],[1.3,.65,1.0]);r.rotation.y=Math.PI/4;}
+    function cargo(x,z){for(let i=0;i<3;i++)mesh(box,i===1?roof:dark,root,[x-.65+i*.65,1.35,z],[.55,.65,.9]);mesh(box,wood,root,[x,1.02,z+1.1],[1.8,.15,.8]);const crane=mat(0xd7ad58);mesh(box,crane,root,[x+.8,2.05,z-.3],[.1,2.1,.1]);mesh(box,crane,root,[x+.25,3.08,z-.3],[1.7,.12,.12]);mesh(box,dark,root,[x-.45,2.7,z-.3],[.03,.7,.03]);}
+    function fanFactory(x,z){
+      const steel=mat(0x42636a),clear=mat(0xb9e4e8,{transparent:true,opacity:.22,depthWrite:false,side:THREE.DoubleSide,roughness:.2});
+      mesh(box,road,root,[x,1.02,z],[4.3,.12,3.5]);
+      for(const dx of [-1.95,1.95])for(const dz of [-1.5,1.5])mesh(box,steel,root,[x+dx,2.4,z+dz],[.12,2.8,.12]);
+      mesh(box,clear,root,[x,3.83,z],[4.25,.08,3.4]);
+      for(const dz of [-1.5,0,1.5])mesh(box,steel,root,[x,3.76,z+dz],[4.1,.10,.08]);
+      for(const dx of [-1.95,1.95])mesh(box,steel,root,[x+dx,3.75,z],[.10,.12,3.2]);
+      mesh(box,clear,root,[x-2,2.5,z],[.04,2.4,3.1]);
+      mesh(cylinder,dark,root,[x,3.43,z],[.065,.55,.065]);
+      const hub=new THREE.Group();hub.position.set(x,3.17,z);root.add(hub);const fanBlack=mat(0x101c20);mesh(cylinder,fanBlack,hub,[0,0,0],[.2,.16,.2]);
+      for(let i=0;i<6;i++){const a=i*Math.PI/3,blade=mesh(box,fanBlack,hub,[Math.sin(a)*.7,0,Math.cos(a)*.7],[.28,.08,1.4]);blade.rotation.y=a;}fans.push(hub);
+    }
     if(cfg.id==='a'){
-      mesh(box,road,root,[0,1.02,0],[12,.08,1.1]);mesh(box,road,root,[0,1.03,0],[1.05,.08,9.5]);
-      for(const x of [-4.4,-2.1,2.1,4.4])for(const z of [-2.7,2.5])makeBuilding(x,z,1.55,1.8,2+random()*4.3);
-      for(const x of [-5.7,-3,2.7,5.6]){tree(x,-.6,.85);tree(x,.65,.8);}
-      mesh(cylinder,road,root,[0,1.06,0],[1.4,.18,1.4]);
-      mesh(cylinder,glass,root,[0,1.2,0],[.95,.12,.95]);
-    }
-    // B: varied terracotta roofs and intimate lanes around a village square.
-    if(cfg.id==='b'){
-      mesh(box,road,root,[0,1.03,0],[10,.08,1]);
-      for(const x of [-4.5,-2.2,.2,2.6,4.7])for(const z of [-2.3,2.1]){
-        const h=1.15+random()*.8;makeBuilding(x,z,1.55,1.55,h);
-        const r=mesh(cone,roof,root,[x,1+h+.65,z],[1.32,1.05,1.32]);r.rotation.y=Math.PI/4;
-      }
-      for(const t of [[-5,0],[5,0],[-1,-4],[2,4],[-3,4]])tree(...t,.9);
-      mesh(cylinder,road,root,[0,1.08,0],[1.2,.16,1.2]);
-    }
-    // C: low residential pavilions around a sheltered crescent garden.
-    if(cfg.id==='c'){
-      for(const [x,z,r] of [[-3,-2,-.3],[0,-3,0],[3,-2,.3]])makeBuilding(x,z,2.5,1.8,1.65,r);
-      const pool=mesh(cylinder,glass,root,[0,1.04,-1.3],[1.4,.1,.65]);pool.castShadow=false;
-      for(const t of [[-6,-1],[-6,2],[-5,4],[5,3],[6,0],[4,-4],[-3,-4]])tree(...t,.85+random()*.3);
-      mesh(box,road,root,[0,1.03,-.3],[10,.1,.7]);
-      for(const x of [-2.8,2.8])mesh(box,wood,root,[x,1.35,1.2],[1.2,.22,.45]);
-    }
-    // D: commercial waterfront, an angular landmark and piers.
-    if(cfg.id==='d'){
-      makeBuilding(-2.8,-1.6,2.3,2.5,3.3);makeBuilding(.3,-2,2.2,2.4,5.8);makeBuilding(3,-1.6,1.9,2,2.6);
-      for(const x of [-3,0,3]){mesh(box,wood,root,[x,.8,6.3],[.75,.22,4.5]);mesh(box,road,root,[x,1.04,2.7],[2.2,.08,1]);}
-      mesh(box,road,root,[0,1.02,1],[10,.12,1.15]);
-      for(const x of [-5,5]){tree(x,-1,.9);tree(x,1.4,.8);}
-    }
-    // E: green campus, landscaped terraces, an open central court.
-    if(cfg.id==='e'){
-      makeBuilding(-3,-1,2.5,3,2.2);makeBuilding(2.6,-1.5,2.7,2.3,3.1);makeBuilding(1,2.4,2.8,1.6,1.5);
-      mesh(cylinder,road,root,[0,1.04,0],[2,.12,2]);
-      mesh(cylinder,leafLight,root,[0,1.17,0],[1.05,.17,1.05]);tree(0,0,.9);
-      for(const t of [[-5,-2],[-4,3],[-2,4],[4,2],[4,-4],[0,-4]])tree(...t,.8+random()*.3);
-      mesh(box,road,root,[0,1.04,0],[.8,.08,10]);
+      for(const [x,z,w,h] of [[-5,-.8,1.8,1.8],[-2.2,-2.7,2,2.5],[1,.8,2.2,1.65],[4,-1.8,1.8,2.1]])makeBuilding(x,z,w,1.65,h);
+      for(const z of [-3.8,-3.1])mesh(box,road,root,[-1.5,1.05,z],[9,.10,.35]);
+      islet(-6.7,3.0,1.7,.55);makeBuilding(-6.8,3.0,1.2,1,1.0);const crane=mat(0xd7ad58);mesh(box,crane,root,[-5.8,2.5,3.0],[.12,3,.12]);mesh(box,crane,root,[-6.6,4.0,3.0],[2.5,.12,.12]);mesh(box,dark,root,[-7.5,3.4,3.0],[.03,1.1,.03]);
+      islet(4.9,3.35,1.55,.60);pavilion(4.9,3.35);path([[-6.7,1.7],[-6.7,2.6]],.30,wood);path([[4.9,2.0],[4.9,2.8]],.30,wood);
+      for(const x of [-7.5,6.5])tree(x,-1.3,.65);
+    }else if(cfg.id==='b'){
+      for(const [x,z,h] of [[-5,-2.3,1.4],[-3.4,.7,1.8],[-1.8,-2.7,2.0],[0,1.1,1.35],[1.8,-2.6,1.6],[3.5,.8,1.85],[5.1,-1.2,1.25]])home(x,z,1.3,1.35,h);
+      mesh(box,road,root,[0,1.04,-.25],[11,.08,.6]);
+      islet(-4.6,4.15,1.5,.6);islet(4.3,4.1,1.5,.6);home(-4.6,4.15,1.2,1.1,.9);home(4.3,4.1,1.2,1.1,1.0);
+      path([[-4.6,2.6],[-4.6,3.7]],.3,wood);path([[4.3,2.6],[4.3,3.6]],.3,wood);tree(-6,-.5,.6);tree(6,-.2,.6);
+    }else if(cfg.id==='c'){
+      for(const [x,z] of [[-6.0,1.8],[-1.8,-3.7],[1.4,-3.7],[5.5,-.9]])home(x,z,1.8,1.4,1.3);
+      mesh(box,road,root,[0,1.03,-.8],[10,.10,.65]);
+      const liftGlass=mat(0xb2ccd3,{transparent:true,opacity:.58,roughness:.2});mesh(box,liftGlass,root,[6.0,2.8,3.0],[1.2,3.6,1.1]);
+      for(const y of [1.3,2.3,3.3,4.5])mesh(box,roof,root,[6.0,y,3.0],[1.3,.12,1.2]);
+      pergola(-5.5,.7);for(let i=0;i<5;i++)mesh(sphere,roof,root,[-6.2+i*.35,2.6,.7],[.28,.15,.5]);
+      for(const t of [[-6,-1],[-6,2],[-5,4],[5,3],[4,-4]])tree(...t,.7);
+    }else if(cfg.id==='d'){
+      fanFactory(-5.2,-1.5);makeBuilding(.4,.6,1.8,1.65,2.6);makeBuilding(3.2,-2,1.7,1.8,2.1);makeBuilding(5.6,-1,1.35,1.4,1.4);
+      islet(-2.5,4.65,1.25,.55);cargo(-2.5,4.5);islet(3.5,4.65,1.25,.55);pavilion(3.5,4.5);
+      path([[-2.5,2.6],[-2.5,4.2]],.3,wood);path([[3.5,2.6],[3.5,4.2]],.3,wood);
+    }else{
+      fanFactory(6.0,-1.3);makeBuilding(-.2,-2.4,1.6,1.5,2.4);home(-4.0,-2.6,1.5,1.4,1.3);home(-2,-1.3,1.2,1.2,1.1);
+      for(let i=0;i<3;i++){mesh(box,wood,root,[-4.5+i*.9,1.05,1.0],[.75,.12,1.2]);for(let j=0;j<3;j++)mesh(box,leafLight,root,[-4.5+i*.9,1.2,.65+j*.35],[.55,.15,.12]);}
+      islet(-4.4,4.1,1.4,.6);cargo(-4.4,4.0);islet(3.4,4.1,1.4,.6);pavilion(3.4,4.0);
+      path([[-4.4,2.7],[-4.4,3.7]],.3,wood);path([[3.4,2.7],[3.4,3.7]],.3,wood);tree(-6,-1.7,.65);tree(0,-4,.65);
     }
     // Peripheral planted shoulders follow each coastline, away from the settlement core.
     for(let i=0;i<n;i+=isMobile?9:6){
       const v=contour[i],x=v.x*.88,z=-v.y*.88;
       if(cfg.id==='c'&&z>0&&Math.abs(x)<4.5)continue;
-      if(cfg.id==='d'&&z>1.8&&Math.abs(x)<4.2)continue;
+      if((cfg.id==='d'&&x<-2.3)||(cfg.id==='e'&&x>2.4))continue;
       if(buildings.some(b=>Math.abs(b.p[0]-x)<b.s[0]/2+.8&&Math.abs(b.p[2]-z)<b.s[2]/2+.8))continue;
       if(Math.abs(x)<.7||Math.abs(z)<.65)continue;
       tree(x,z,.65+random()*.42);
@@ -169,27 +185,6 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
       hillocks.push({p:[x*.96,.80,z*.96],s:[1.1,.42,.8]});
     }
     for(let i=0;i<n;i+=isMobile?7:4){if(i%13<4)continue;const v=contour[i],sc=1.04+shoreNoise[i];stones.push({p:[v.x*sc,-.02+random()*.17,-v.y*sc],s:[.26+random()*.5,.22+random()*.42,.28+random()*.4],rot:random()*6});}
-    if(cfg.id==='a'){
-      path([[-8,-.4],[-7,-1.7],[-6.4,-2.4]],.42);pergola(-7,-.8);bench(-7,1.7);
-      const crane=mat(0xd6a34e);mesh(box,crane,root,[6.2,2.65,-1.8],[.13,3.3,.13]);mesh(box,crane,root,[5.3,4.25,-1.8],[3.6,.14,.14]);mesh(box,dark,root,[3.8,3.65,-1.8],[.035,1.2,.035]);
-      for(let i=0;i<3;i++)mesh(box,stoneMat,root,[-7+i*.65,1.1,2],[.5,.25,.7]);
-    }else if(cfg.id==='b'){
-      path([[-6,1],[-5.6,2.5],[-3.8,3.3],[-1,3.4],[.5,3]],.4);pergola(0,0);bench(0,-.9);
-      for(const x of [-4.5,-2.2,2.6,4.7]){mesh(box,roof,root,[x,2.1,.95],[1.55,.12,.7]);for(let i=0;i<4;i++)flowers.push({p:[x-.5+i*.33,1.23,3.25],s:[.16,.2,.16]});}
-    }else if(cfg.id==='c'){
-      path([[-6,1],[-5.2,-.3],[-3.8,-.8],[-2,-.9],[0,-.85],[2,-.8],[4,-.5],[6,1]],.5);
-      pergola(-5.5,.7);bench(5.6,.3,.3);bench(-5,-.2);
-      for(let i=0;i<14;i++){const t=i/13*Math.PI;flowers.push({p:[Math.cos(t)*5,1.14,-3.4-Math.sin(t)*.6],s:[.17,.18,.17]});}
-    }else if(cfg.id==='d'){
-      makeBuilding(-5.4,-2.7,1.5,1.6,1.1);
-      for(let i=0;i<3;i++)mesh(box,i===1?roof:dark,root,[5.3,1.35,1.1+i*.65],[1.3,.65,.5]);
-      for(const x of [-2.8,.3]){const hub=new THREE.Group();hub.position.set(x,x<0?4.75:6.95,-1.6);root.add(hub);mesh(cylinder,dark,hub,[0,0,0],[.35,.12,.35]);for(let i=0;i<3;i++){const blade=mesh(box,glass,hub,[0,.1,0],[.12,.06,.65]);blade.rotation.y=i*Math.PI/3;}fans.push(hub);}
-      for(const x of [-3,0,3])mesh(box,walls,root,[x+.7,.1,6.4],[.5,.35,1.4]);
-    }else{
-      for(const x of [-5.3,-4.2,-3.1])for(const z of [-3.7,-4.4])panels.push({p:[x,1.25,z],s:[.85,.12,.48],rot:-.15});
-      path([[-4,2],[-5,1],[-5,-.2]],.4);pergola(-3.3,2.6);bench(2.8,4);
-      for(let i=0;i<3;i++)mesh(box,leafLight,root,[5+i*.35,1.02+i*.035,-1.2],[.28,.18,2.4]);
-    }
     instances(box,wood,details,root);instances(box,dark,panels,root);instances(sphere,stoneMat,stones,root,!isMobile);instances(sphere,leafLight,shrubs,root,!isMobile);instances(sphere,flowerMat,flowers,root,!isMobile);instances(sphere,leafLight,hillocks,root,false);instances(cone,leaf,pines,root);
     instances(box,walls,buildings,root);instances(box,roof,roofs,root);instances(box,glass,windows,root);
     instances(cylinder,wood,trunks,root);instances(sphere,leaf,crowns,root);instances(sphere,leafLight,crowns2,root,!isMobile);
@@ -221,7 +216,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     button.addEventListener('pointerenter',event=>{if(event.pointerType!=='touch')setHovered(cfg.id);});button.addEventListener('pointerleave',()=>setHovered(null));
     button.addEventListener('focus',()=>setHovered(cfg.id));button.addEventListener('blur',()=>setHovered(null));container.appendChild(button);
     labels.push({button,point:new THREE.Vector3(cfg.x,0,cfg.z+3),x:0,y:0});
-    islandData.set(cfg.id,{root,own,cfg});
+    islandData.set(cfg.id,{root,own,cfg,navigationPoints,landContours});
   }
   function refreshLabels(){for(const {button} of labels){const id=button.dataset.island,expanded=active.has(id)||hoveredGroup===id||revealedGroup===id;button.classList.toggle('is-expanded',expanded);button.setAttribute('aria-expanded',String(expanded));}}
   function setHovered(id){hoveredGroup=id;refreshLabels();}
@@ -235,7 +230,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   function routeCurve(from,to){
     const a=islandData.get(from),b=islandData.get(to);if(!a||!b)return null;
     const av=a.root.position,bv=b.root.position,delta=bv.clone().sub(av);delta.y=0;delta.normalize();
-    const shore=(item,direction)=>{const terrain=item.root.children.find(o=>o.geometry?.getAttribute('color')),positions=terrain.geometry.getAttribute('position');let distance=0;for(let i=0;i<positions.count;i++)distance=Math.max(distance,(positions.getX(i)*direction.x+positions.getZ(i)*direction.z)*item.root.scale.x);return distance+1.6;};
+    const shore=(item,direction)=>Math.max(...item.navigationPoints.map(p=>(p.x*direction.x+p.z*direction.z)*item.root.scale.x))+1.6;
     const start=av.clone().addScaledVector(delta,shore(a,delta)),end=bv.clone().addScaledVector(delta,-shore(b,delta.clone().negate()));
     const key=[from,to].sort().join(':');
     // Side docks keep the short central links clear of land and the stable labels.
@@ -254,8 +249,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     const curve=new THREE.QuadraticBezierCurve3(start,mid,end);
     const coast=(item,point)=>{
       const direction=point.clone().sub(item.root.position);direction.y=0;direction.normalize();
-      const positions=item.root.children.find(o=>o.geometry?.getAttribute('color')).geometry.getAttribute('position'),n=positions.count/5;let hit=0;
-      for(let i=0;i<n;i++){const j=(i+1)%n,ax=positions.getX(2*n+i)*item.root.scale.x,az=positions.getZ(2*n+i)*item.root.scale.x,bx=positions.getX(2*n+j)*item.root.scale.x,bz=positions.getZ(2*n+j)*item.root.scale.x,ex=bx-ax,ez=bz-az,den=direction.x*ez-direction.z*ex;if(Math.abs(den)<.00001)continue;const t=(ax*ez-az*ex)/den,u=(ax*direction.z-az*direction.x)/den;if(t>=0&&u>=0&&u<=1)hit=Math.max(hit,t);}
+      let hit=0;for(const contour of item.landContours)for(let i=0;i<contour.length;i++){const j=(i+1)%contour.length,ax=contour[i][0]*item.root.scale.x,az=contour[i][1]*item.root.scale.x,bx=contour[j][0]*item.root.scale.x,bz=contour[j][1]*item.root.scale.x,ex=bx-ax,ez=bz-az,den=direction.x*ez-direction.z*ex;if(Math.abs(den)<.00001)continue;const t=(ax*ez-az*ex)/den,u=(ax*direction.z-az*direction.x)/den;if(t>=0&&u>=0&&u<=1)hit=Math.max(hit,t);}
       const anchor=item.root.position.clone().addScaledVector(direction,Math.max(0,hit-.65));anchor.y=.28;return anchor;
     };
     curve.docks=[{shore:coast(a,start),port:start},{shore:coast(b,end),port:end}];return curve;
@@ -313,7 +307,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   const vesselWakeGeometry=geo(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(-.26,0,-1),new THREE.Vector3(-.8,0,-3),new THREE.Vector3(.26,0,-1),new THREE.Vector3(.8,0,-3)]));
   const vesselWakeMaterial=new THREE.LineBasicMaterial({color:0xe8fff0,transparent:true,opacity:.72});mats.add(vesselWakeMaterial);
   function makeVessel(highlight){
-    const boat=new THREE.Group();boat.scale.setScalar(highlight?2.55:1.85);
+    const boat=new THREE.Group();boat.scale.setScalar(highlight?2.04:1.48);
     mesh(hullGeometry,highlight?vesselGold:vesselPale,boat);
     mesh(box,vesselWhite,boat,[0,.43,-.18],[.6,.5,.82]);
     mesh(box,vesselGlass,boat,[0,.49,.245],[.42,.19,.025]);
@@ -340,7 +334,7 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   function resize(){if(disposed)return;delete renderer.domElement.dataset.terrainBounds;const rect=container.getBoundingClientRect();width=Math.max(1,rect.width);height=Math.max(1,rect.height);camera.aspect=width/height;camera.fov=width<600?50:40;camera.updateProjectionMatrix();renderer.setSize(width,height,false);const mobile=width<600;if(mobile!==mobileLayout){
       if(mobile){camera.position.set(0,70,48);controls.target.set(0,0,-3);}else{camera.position.set(0,48,65);controls.target.set(0,0,0);}
       const compact={a:[-12.5,-19],b:[12.5,-19],c:[-12.5,17],d:[12.5,17],e:[0,-1]};
-      for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);item.root.scale.setScalar(mobile?.83:1.2);const label=labels.find(v=>v.button.dataset.island===id);const anchor={a:[0,1.3,0],b:[0,1.3,0],c:[0,1.3,-3.3],d:[0,1.3,0],e:[0,1.3,0]}[id];label.point.set(x+anchor[0]*item.root.scale.x,anchor[1]*item.root.scale.x,z+anchor[2]*item.root.scale.x);}
+      for(const [id,item] of islandData){const [x,z]=mobile?compact[id]:[item.cfg.x,item.cfg.z];item.root.position.set(x,0,z);item.root.scale.setScalar(mobile?.83:1.2);const label=labels.find(v=>v.button.dataset.island===id);const anchor={a:[0,1.3,-3.3],b:[0,1.3,-3.2],c:[0,1.3,-3.3],d:[2.6,1.3,-1.5],e:[-2.8,1.3,-2.4]}[id];label.point.set(x+anchor[0]*item.root.scale.x,anchor[1]*item.root.scale.x,z+anchor[2]*item.root.scale.x);}
       renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,mobile?1.25:1.5));renderer.shadowMap.enabled=false;mobileLayout=mobile;controls.autoRotate=!mobile&&tour;controls.enableRotate=!mobile;controls.enableZoom=!mobile;renderer.domElement.style.touchAction=mobile?'pan-y':'none';controls.autoRotateSpeed=.17;rebuildNetwork();setActive([...active],currentEdges);
     }}
   const observer=new ResizeObserver(resize);observer.observe(container);resize();
