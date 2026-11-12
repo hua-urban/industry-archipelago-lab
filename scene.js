@@ -1,7 +1,7 @@
 import * as THREE from './lib/three.module.js';
 import { OrbitControls } from './lib/OrbitControls.js';
 import { sampleVesselMotion } from './vessel-motion.js';
-import { routes as topicRoutes, groups as contentGroups } from './content.js';
+import { routes as topicRoutes, groups as contentGroups } from './content.js?v=dname8';
 
 const ISLANDS = [
   { id:'a', title:'地主改建', x:-23, z:-15, r:9.1, color:0xc5b185, roof:0xb9a385, seed:11 },
