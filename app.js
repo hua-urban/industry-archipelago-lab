@@ -1,4 +1,4 @@
-import { groups, routes, needs, identities } from './content.js?v=mobile9';
+import { groups, routes, needs, identities } from './content.js?v=public10';
 
 const $ = id => document.getElementById(id);
 const groupById = new Map(groups.map(group => [group.id, group]));
@@ -59,7 +59,7 @@ function selectGroup(id, scroll = false) {
   const identity = identities[id];
   document.querySelectorAll('[data-group]').forEach(button => button.setAttribute('aria-pressed',String(button.dataset.group === id)));
   $('group-detail').style.setProperty('--group-color',group.color);
-  $('group-detail').innerHTML = `<div class="group-intro"><span class="group-index">${id.toUpperCase()}</span><h3>${escapeHTML(group.name)}</h3><p class="island-identity">${escapeHTML(identity.motif)}</p><p class="tagline">${escapeHTML(group.tagline)}</p><p class="description">${escapeHTML(group.description)}</p><div class="handoff"><small>這座島如何接棒</small><p>${escapeHTML(identity.handoff)}</p></div><p class="source-line">${escapeHTML(identity.source)}・造景為視覺轉譯</p><a class="visit" href="${group.url}">進入${id.toUpperCase()}組完整動態島 ↗</a></div><div class="topic-grid">${group.topics.map((topic,index)=>`<a class="topic-link" href="${topicURL(id,topic.id)}"><span>${String(index+1).padStart(2,'0')}</span><div><strong>${escapeHTML(topic.title)} ↗</strong><small>${escapeHTML(topic.tagline)}</small></div></a>`).join('')}</div>`;
+  $('group-detail').innerHTML = `<div class="group-intro"><span class="group-index">${id.toUpperCase()}</span><h3>${escapeHTML(group.name)}</h3><p class="island-identity">${escapeHTML(identity.motif)}</p><p class="tagline">${escapeHTML(group.tagline)}</p><p class="description">${escapeHTML(group.description)}</p><div class="handoff"><small>這座島如何接棒</small><p>${escapeHTML(identity.handoff)}</p></div><a class="visit" href="${group.url}">進入${id.toUpperCase()}組完整動態島 ↗</a></div><div class="topic-grid">${group.topics.map((topic,index)=>`<a class="topic-link" href="${topicURL(id,topic.id)}"><span>${String(index+1).padStart(2,'0')}</span><div><strong>${escapeHTML(topic.title)} ↗</strong><small>${escapeHTML(topic.tagline)}</small></div></a>`).join('')}</div>`;
   const url = new URL(location.href);
   url.searchParams.set('group', id);
   history.replaceState(null,'',url);
@@ -77,7 +77,7 @@ async function buildScene() {
   scene?.dispose();
   scene = undefined;
   try {
-    factory ||= (await import('./scene.js?v=mobile9')).createArchipelago;
+    factory ||= (await import('./scene.js?v=public10')).createArchipelago;
     if (version !== rebuilding) return;
     scene = factory({container: $('scene'), reducedMotion, onSelect: (id,scroll) => selectGroup(id,scroll), onError: showFallback});
     $('tour').disabled = false;

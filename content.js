@@ -7,7 +7,7 @@ export const groups = [
     name: '地主改建整合鏈',
     shortName: '地主改建',
     tagline: '先建立地主信任與共識，再把改建需求交到下一棒。',
-    description: 'A 組簡報以地主改建的前兩棒為主軸：先建立信任、凝聚共識，再銜接實施者評估。跨領域專業依案件需要加入，從單點引薦走向跨案協作。',
+    description: '地主改建從前兩棒開始：先建立信任、凝聚共識，再銜接實施者評估。跨領域專業依案件需要加入，從單點引薦走向跨案協作。',
     color: '#9b7851',
     url: 'https://hua-urban.com/industry-islands/a/',
     topics: [
@@ -26,7 +26,7 @@ export const groups = [
     name: '老屋現金流升級鏈',
     shortName: '老屋現金流',
     tagline: '一間老屋的需要，串起房源到營運的不同專業。',
-    description: '陳靖薇組長的 B 組簡報，呈現夥伴之間的水平協作，以及同一房源在不同階段的垂直接續。房源、資金、法律、修繕、招租與管理，依實際需要串聯。',
+    description: '讓夥伴橫向協作，接續同一房源的不同階段。房源、資金、法律、修繕、招租與管理，依實際需要串聯。',
     color: '#b46c4b',
     url: 'https://hua-urban.com/industry-islands/b/',
     topics: [
@@ -45,7 +45,7 @@ export const groups = [
     name: '高齡安居 × 資產傳承鏈',
     shortName: '傳承安居',
     tagline: '以家人的安居需求，連結空間、產權與傳承安排。',
-    description: '王春雄組長的 C 組簡報，以老公寓電梯案說明接力：建築師評估可行性，律師協助住戶協商，地政士接續產權與測量議題。案例估算不代表每案成效。',
+    description: '從高齡安居與資產傳承的需求出發，連結建築可行性評估、住戶協商、產權與測量等專業；實際服務依個案條件討論。',
     color: '#69856a',
     url: 'https://hua-urban.com/industry-islands/c/',
     topics: [
@@ -64,7 +64,7 @@ export const groups = [
     name: '商用空間產業鏈',
     shortName: '商用空間',
     tagline: '一案一位主責，讓空間、工程與營運一起對題。',
-    description: 'Naomi／陳向柔組長的 D 組簡報，從每案一位主責開始：先釐清問題，再召集空間、工程、營運夥伴。接續提案、示範案與回顧，是簡報中的推進規劃。',
+    description: '每案由一位主責開始：先釐清問題，再召集空間、工程與營運夥伴，共同討論提案與後續分工。',
     color: '#347e81',
     url: 'https://hua-urban.com/industry-islands/d/',
     topics: [
@@ -83,7 +83,7 @@ export const groups = [
     name: '房產客戶成長鏈',
     shortName: '房產成長',
     tagline: '從一位房產客戶出發，看見生活與事業的後續需要。',
-    description: 'E 組簡報以房產客戶成長生態圈串聯八個專業領域，延伸海外、土地廠房、設備、財務、人才與 AI 商務。協作情境及 AI 流程屬構想，實際分工仍由夥伴確認。',
+    description: '以房產客戶的需求串聯八個專業領域，延伸海外、土地廠房、設備、財務、人才與 AI 商務。協作情境及 AI 流程屬構想，實際分工仍由夥伴確認。',
     color: '#547f45',
     url: 'https://hua-urban.com/industry-islands/e/',
     topics: [
@@ -145,9 +145,9 @@ export const needs = [
 
 // Visual translations of the group presentations; these are motifs, not actual venues.
 export const identities = {
- a:{motif:'改建街廓',handoff:'信任 → 共識 → 實施者評估',source:'A 組簡報，第 33–36 頁'},
- b:{motif:'老屋院落',handoff:'橫向連結夥伴，縱向接續一個房源',source:'B 組簡報，第 38–42 頁'},
- c:{motif:'安居花園',handoff:'建築可行性 → 住戶協商 → 產權議題',source:'C 組簡報，第 43–50 頁'},
- d:{motif:'商用港灣',handoff:'主責釐清 → 專業召集 → 提案與回顧',source:'D 組簡報，第 51–58 頁'},
- e:{motif:'成長園區',handoff:'房產需求 → 生活與事業 → 跨域連結',source:'E 組簡報，第 59–63 頁'}
+ a:{motif:'改建街廓',handoff:'信任 → 共識 → 實施者評估'},
+ b:{motif:'老屋院落',handoff:'橫向連結夥伴，縱向接續一個房源'},
+ c:{motif:'安居花園',handoff:'建築可行性 → 住戶協商 → 產權議題'},
+ d:{motif:'商用港灣',handoff:'主責釐清 → 專業召集 → 提案與回顧'},
+ e:{motif:'成長園區',handoff:'房產需求 → 生活與事業 → 跨域連結'}
 };
