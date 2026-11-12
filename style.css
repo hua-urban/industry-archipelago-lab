@@ -37,3 +37,7 @@ body{background:var(--paper)}main,.masthead,footer{max-width:1600px}.masthead{pa
 @media(max-width:600px){.scene .island-marker[data-island=d],.scene .island-marker[data-island=e]{width:66px}}
 
 .island-label-leader{position:absolute;z-index:2;height:1px;background:#eaf6dca6;transform-origin:0 50%;pointer-events:none}.island-label-leader[hidden]{display:none}
+
+/* Direct group entrances remain usable before the animated scene loads. */
+.hero-topline{display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}.hero-topline .eyebrow{margin:0}.group-shortcuts{display:flex;flex-wrap:wrap;gap:7px}.group-shortcuts a{display:flex;align-items:center;justify-content:center;gap:7px;min-height:40px;padding:7px 12px;border:1px solid #c6d1c2;border-radius:9px;background:#f2f3e9;color:#24463c;font-size:12px;text-decoration:none;line-height:1.4}.group-shortcuts b{font-size:11px;color:#74855e}.group-shortcuts a:hover{background:#e4ebda;border-color:#8da17e}.group-shortcuts a:focus-visible{outline:2px solid #365f4a;outline-offset:3px}
+@media(max-width:600px){.hero-topline{gap:13px}.group-shortcuts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;width:100%}.group-shortcuts a{flex-direction:column;gap:3px;min-height:48px;padding:6px 3px;font-size:11px;text-align:center}.group-shortcuts b{font-size:11px}.group-shortcuts span{word-break:keep-all;overflow-wrap:anywhere}}
