@@ -215,7 +215,8 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     button.addEventListener('click',event=>chooseIsland(cfg.id,event.pointerType==='touch'));
     button.addEventListener('pointerenter',event=>{if(event.pointerType!=='touch')setHovered(cfg.id);});button.addEventListener('pointerleave',()=>setHovered(null));
     button.addEventListener('focus',()=>setHovered(cfg.id));button.addEventListener('blur',()=>setHovered(null));container.appendChild(button);
-    labels.push({button,point:new THREE.Vector3(cfg.x,0,cfg.z+3),x:0,y:0});
+    const leader=document.createElement('span');leader.className='island-label-leader';leader.setAttribute('aria-hidden','true');container.appendChild(leader);
+    labels.push({button,leader,point:new THREE.Vector3(cfg.x,0,cfg.z+3),x:0,y:0});
     islandData.set(cfg.id,{root,own,cfg,navigationPoints,landContours});
   }
   function refreshLabels(){for(const {button} of labels){const id=button.dataset.island,expanded=active.has(id)||hoveredGroup===id||revealedGroup===id;button.classList.toggle('is-expanded',expanded);button.setAttribute('aria-expanded',String(expanded));}}
@@ -348,7 +349,17 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
     for(const vessel of traffic)sail(vessel.boat,vessel.curve,vessel.phase);
     for(const ring of portRings){const pulse=reducedMotion?0:(elapsed*.6+ring.userData.phase)%1;ring.scale.setScalar(1+pulse*.55);ring.material.opacity=(1-pulse*.6)*(ring.userData.phase?.65:1);}
     // All states share the same reserved ground anchor and fixed label frame.
-    for(const label of labels){projected.copy(label.point).project(camera);const x=Math.round((projected.x*.5+.5)*width),y=Math.round((-projected.y*.5+.5)*height);if(x!==label.x||y!==label.y){label.button.style.transform=`translate3d(${x}px,${y}px,0) translate(-50%,-50%)`;label.x=x;label.y=y;}}
+    for(const label of labels){
+      projected.copy(label.point).project(camera);
+      const groundX=(projected.x*.5+.5)*width,groundY=(-projected.y*.5+.5)*height;
+      // Fixed mobile callout lanes leave the buildings and north/south shipping lanes clear.
+      const offsets={a:[0,-33],b:[0,-33],c:[-48,-45],d:[33,-52],e:[12,-41]};
+      const [dx,dy]=mobileLayout?offsets[label.button.dataset.island]:[0,0];
+      const x=Math.round(Math.max(label.button.offsetWidth/2+6,Math.min(width-label.button.offsetWidth/2-6,groundX+dx*width/350.5))),y=Math.round(groundY+dy*width/350.5);
+      if(x!==label.x||y!==label.y){label.button.style.transform=`translate3d(${x}px,${y}px,0) translate(-50%,-50%)`;label.x=x;label.y=y;}
+      label.leader.hidden=!mobileLayout;
+      if(mobileLayout){const expanded=label.button.classList.contains('is-expanded'),endX=expanded?x:x-label.button.offsetWidth/2+11,endY=y+(expanded?label.button.offsetHeight/2:9),ex=endX-groundX,ey=endY-groundY;label.leader.style.cssText=`left:${groundX}px;top:${groundY}px;width:${Math.hypot(ex,ey)}px;transform:rotate(${Math.atan2(ey,ex)}rad)`;}
+    }
 
     renderer.render(scene,camera);
     if(!renderer.domElement.dataset.terrainBounds){
@@ -367,6 +378,6 @@ export function createArchipelago({container,onSelect=()=>{},onError=()=>{},redu
   return {
     setActive,setHovered,revealGroup,setTour(value){tour=Boolean(value)&&!reducedMotion;controls.autoRotate=tour&&!mobileLayout;if(!tour){controls.enableDamping=false;controls.update();controls.enableDamping=true;}},resize,
     getMetrics(){return {fps,drawCalls:renderer.info.render.calls,triangles:renderer.info.render.triangles,geometries:renderer.info.memory.geometries,textures:renderer.info.memory.textures,pixelRatio:renderer.getPixelRatio(),islands:5,tour,active:[...active]};},
-    dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointermove',pointerMove);renderer.domElement.removeEventListener('pointerleave',pointerLeave);renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button} of labels)button.remove();scene.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();for(const r of networkResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
+    dispose(){disposed=true;cancelAnimationFrame(raf);observer.disconnect();visibilityObserver.disconnect();controls.dispose();renderer.domElement.removeEventListener('pointermove',pointerMove);renderer.domElement.removeEventListener('pointerleave',pointerLeave);renderer.domElement.removeEventListener('pointerdown',pointerDown);renderer.domElement.removeEventListener('pointerup',pointerUp);renderer.domElement.removeEventListener('webglcontextlost',contextLost);for(const {button,leader} of labels){button.remove();leader.remove();}scene.traverse(o=>{if(o.isInstancedMesh)o.dispose();});for(const g of geos)g.dispose();for(const m of mats)m.dispose();for(const r of routeResources)r.dispose();for(const r of networkResources)r.dispose();renderer.dispose();renderer.domElement.remove();}
   };
 }

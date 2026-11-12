@@ -1,4 +1,4 @@
-import { groups, routes, needs, identities } from './content.js?v=native8';
+import { groups, routes, needs, identities } from './content.js?v=mobile9';
 
 const $ = id => document.getElementById(id);
 const groupById = new Map(groups.map(group => [group.id, group]));
@@ -77,7 +77,7 @@ async function buildScene() {
   scene?.dispose();
   scene = undefined;
   try {
-    factory ||= (await import('./scene.js?v=native8')).createArchipelago;
+    factory ||= (await import('./scene.js?v=mobile9')).createArchipelago;
     if (version !== rebuilding) return;
     scene = factory({container: $('scene'), reducedMotion, onSelect: (id,scroll) => selectGroup(id,scroll), onError: showFallback});
     $('tour').disabled = false;
