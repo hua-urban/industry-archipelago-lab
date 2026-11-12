@@ -43,7 +43,7 @@ body{background:var(--paper)}main,.masthead,footer{max-width:1600px}.masthead{pa
 @media(max-width:600px){.hero-topline{gap:13px}.group-shortcuts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:5px;width:100%}.group-shortcuts a{flex-direction:column;gap:3px;min-height:48px;padding:6px 3px;font-size:11px;text-align:center}.group-shortcuts b{font-size:11px}.group-shortcuts span{word-break:keep-all;overflow-wrap:anywhere}}
 
 /* Full chain names share the original islands' pill navigation. */
-.hero-topline{align-items:flex-start}.group-shortcuts{display:flex;flex-wrap:wrap;gap:10px;width:100%}.group-shortcuts a{display:inline-flex;flex-direction:row;min-height:44px;padding:9px 15px;border-radius:999px;border-color:#c8d5cb;background:transparent;font-size:12px;line-height:1.5;text-align:center}.group-shortcuts a:hover{background:#e5ecdf}@media(max-width:600px){.group-shortcuts{display:flex;gap:8px}.group-shortcuts a{max-width:100%;padding:9px 13px;font-size:12px;min-height:44px}}
+.hero-topline{align-items:flex-start}.group-shortcuts{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;width:100%}.group-shortcuts a{display:inline-flex;flex-direction:row;min-height:44px;padding:9px 15px;border-radius:999px;border-color:#c8d5cb;background:transparent;font-size:12px;line-height:1.5;text-align:center}.group-shortcuts a:hover{background:#e5ecdf}@media(max-width:600px){.group-shortcuts{display:flex;gap:8px}.group-shortcuts a{max-width:100%;padding:9px 13px;font-size:12px;min-height:44px}}
 
 @media(max-width:600px){.group-shortcuts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}.group-shortcuts a{padding:9px 10px;min-height:48px}.group-shortcuts a:nth-child(3){grid-column:1 / -1}}
 
